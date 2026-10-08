@@ -1,0 +1,1 @@
+# engine i połączenie z sqlalchemy
