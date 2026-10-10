@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta, timezone
 import jwt
 from jwt.exceptions import InvalidTokenError
-from schemas import bcrypt_context, oauth2_scheme
 from database.core import database_dependency
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -19,7 +18,7 @@ from typing import Annotated
 SECRET_KEY = settings.secret_key
 ALGORITHM = "HS256"
 
-bcrypt_context = CryptContext(schemes = ["argon2"], deprecated = "auto")
+crypt_context = CryptContext(schemes = ["argon2"], deprecated = "auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl = "token")
 oauth2_password_request = Annotated[OAuth2PasswordRequestForm, Depends()]
 
@@ -28,14 +27,14 @@ async def authenticate_user(user : str, password : str, db : database_dependency
     user_responds = stm.scalar()
     if user_responds is None:
         return False
-    if bcrypt_context.verify(password, user_responds.password) == False:
+    if crypt_context.verify(password, user_responds.password) == False:
         return False 
     if not user_responds.user_status:
         return False
     return user_responds
 
-async def create_jwt_token(username : str, public_id : str, role : str, expired_time : timedelta):
-    payload = {"username" : username, "public_id" : public_id, "role" : role}
+async def create_jwt_token(username : str, public_id : str, private_id : str, role : str, expired_time : timedelta):
+    payload = {"username" : username, "public_id" : public_id, "private_id" : private_id, "role" : role}
     time_to_expired = datetime.now(timezone.utc) + timedelta(minutes = expired_time)
     payload.update({"exp" : time_to_expired})
     return jwt.encode(payload, SECRET_KEY, ALGORITHM)
@@ -45,10 +44,11 @@ async def get_current_user(token : Annotated[str, Depends(oauth2_scheme)]):
         user = jwt.decode(token, SECRET_KEY, ALGORITHM)
         username : str = user.get("username")
         public_id : str = user.get("public_id")
+        private_id : int = user.get("private_id")
         role : str = user.get("role")
-        if username is None or public_id is None or role is None:
+        if username is None or public_id is None or role is None or private_id is None:
             raise HTTPException(status_code = status.HTTP_401_UNAUTHORIZED, detail = "Could not valid user")
-        return {"username" : username, "public_id" : public_id, "role" : role}
+        return {"username" : username, "public_id" : public_id, "private_id" : private_id, "role" : role}
     except InvalidTokenError:
         raise HTTPException(status_code = status.HTTP_401_UNAUTHORIZED, detail = "Could not valid user")
 
@@ -59,7 +59,7 @@ async def create_user(request, db : AsyncSession):
                 name = request.name,
                 lastname = request.lastname,
                 username = request.username,
-                password = bcrypt_context.hash(request.password),
+                password = crypt_context.hash(request.password),
                 email = request.email
             )
     try:
