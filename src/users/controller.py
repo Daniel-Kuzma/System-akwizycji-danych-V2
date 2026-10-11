@@ -23,6 +23,10 @@ async def change_user_information(user_request : ChangeInformationRequest, db : 
 async def change_user_password(user_request : ChangePasswordRequest, db : database_dependency, user : user_dependency, request : Request):
     return await update_user_password(user_request, db, user)
 
+@router.put("/reset-user-password", status_code = status.HTTP_204_NO_CONTENT)
+async def reset_user_password(db : database_dependency, user : user_dependency, request : Request):
+    return await delete(db, user)
+
 @router.put("/delete-user-account", status_code = status.HTTP_204_NO_CONTENT)
 async def delete_account(user_request : PasswordRequest, db : database_dependency, user : user_dependency, request : Request):
     return await delete(user_request, db, user)
