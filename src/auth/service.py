@@ -14,7 +14,7 @@ from database.core import database_dependency
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import Annotated
-
+from core.admin_logger import create_audit_log
 SECRET_KEY = settings.secret_key
 ALGORITHM = "HS256"
 
@@ -64,18 +64,12 @@ async def create_user(request, db : AsyncSession):
             )
     try:
         db.add(user)
-        
         await db.flush()
-        log = AuditLog(user_id = user.id, action = "CREATE", entity_type = "user", entity_id = user.id)
-        
-        db.add(log)
+        await create_audit_log(db, user_id = user.id, action = "CREATE ACCOUNT", entity_type = "user", entity_id = user.id)
         await db.commit()
-        return user
-    except IntegrityError:
-        await db.rollback()
-        raise ValueError("User with this e-mail or username already exist")
+        return {"detail" : "Successfully created user account"}
     except Exception:
         await db.rollback()
-        raise RuntimeError("Critical problem with server")
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
 
 

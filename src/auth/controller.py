@@ -12,15 +12,9 @@ async def login(request_token : oauth2_password_request, db : database_dependenc
     login_user = await authenticate_user(request_token.username, request_token.password, db)
     if not login_user:
         raise HTTPException(status_code = status.HTTP_401_UNAUTHORIZED, detail = "Password or Username is incorrect")
-    token = await create_jwt_token(login_user.username, str(login_user.public_id), login_user.role, 60)
+    token = await create_jwt_token(login_user.username, str(login_user.public_id), login_user.id, login_user.role, 60)
     return {"access_token" : token, "token_type" : "bearer"}
 
 @router.post("/create-account", status_code = status.HTTP_201_CREATED)
 async def create_user_account(db : database_dependency, create_user_request : CreateUserRequest, request = Request):
-    try:
-        await create_user(create_user_request, db)
-        return {"detail" : "Successfully create account"}
-    except ValueError as e:
-        raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, detail = str(e))
-    except Exception as e:
-        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = str(e))
+    return await create_user(create_user_request, db)
