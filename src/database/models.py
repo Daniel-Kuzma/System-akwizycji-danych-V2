@@ -35,7 +35,6 @@ class Device(Base):
     public_id : Mapped[uuid.UUID] = mapped_column(default = uuid.uuid4, unique = True)
     owner_id : Mapped[int] = mapped_column(ForeignKey("users.id", ondelete = "CASCADE"))
     type_of_cultivation_id : Mapped[int | None] = mapped_column(ForeignKey("types_of_cultivations.id", ondelete = "SET NULL"))
-    secret_device_token : Mapped[str] = mapped_column()
     device_name : Mapped[str] = mapped_column()
     device_location : Mapped[str] = mapped_column()
 
@@ -45,7 +44,7 @@ class TelemetryData(Base):
     device_id : Mapped[int] = mapped_column(ForeignKey("devices.id", ondelete = "CASCADE"))
     temperature_reading : Mapped[float] = mapped_column()
     humidity_reading : Mapped[float] = mapped_column()
-    date_reading : Mapped[datetime] = mapped_column(server_default = func.now())
+    created_at : Mapped[datetime] = mapped_column(server_default = func.now())
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
