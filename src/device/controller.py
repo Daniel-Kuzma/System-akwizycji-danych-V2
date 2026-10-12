@@ -7,6 +7,14 @@ from service import *
 
 router = APIRouter()
 
+@router.get("/all-user-device", status_code = status.HTTP_200_OK)
+async def all_user_device(db : database_dependency, user : user_dependency, request : Request):
+    return await user_device(db, user)
+
+@router.get("/user-device/{public_device_ip}", status_code = status.HTTP_200_OK)
+async def user_device(public_device_ip : str, db : database_dependency, user : user_dependency, request : Request):
+    return await user_specify_device(public_device_ip, db, user)
+
 @router.post("/create-new-device", status_code = status.HTTP_201_CREATED)
 async def create_new_device(user_request : DeviceRequest, db : database_dependency, user : user_dependency, request : Request):
     return await create_device(user_request, db, user)
@@ -27,10 +35,4 @@ async def change_device_token_activity(public_device_ip : str, db : database_dep
 async def delete_device(public_device_ip : str, user_request : DeviceNameRequest, db : database_dependency, user : user_dependency, request : Request):
     return await delete(user_request, public_device_ip, db, user)
 
-@router.get("/all-user-device", status_code = status.HTTP_200_OK)
-async def all_user_device(db : database_dependency, user : user_dependency, request : Request):
-    return await user_device(db, user)
 
-@router.get("/user-device/{public_device_ip}", status_code = status.HTTP_200_OK)
-async def user_device(public_device_ip : str, db : database_dependency, user : user_dependency, request : Request):
-    return await user_specify_device(public_device_ip, db, user)
