@@ -107,7 +107,7 @@ async def get_audit_logs(user_id_for_logs, device_public_id, db : AsyncSession, 
     if user_id_for_logs:
         user_result = await user_check(user_id_for_logs, db)
     if device_public_id:
-        device_result = await device_public_id_check(device_public_id)
+        device_result = await device_public_id_check(device_public_id, db)
     try:
         if user_id_for_logs is None and device_public_id is None:
             logs_stmt = await db.execute(select(AuditLog, User.public_id)
@@ -254,7 +254,7 @@ async def show_device_information(device_public_id : str, db : AsyncSession, use
 
 async def delete_device(device_public_id : str, db : AsyncSession, user):
     await admin_check(user)
-    device_result = await device_public_id_check(device_public_id)
+    device_result = await device_public_id_check(device_public_id, db)
     try:
         await db.execute(delete(Device).where(Device.id == device_result.id))
         await create_audit_log(db, user_id = user.get("private_id"), action = "DELETE DEVICE", entity_type = "device", entity_id = device_result.public_id)
@@ -265,7 +265,7 @@ async def delete_device(device_public_id : str, db : AsyncSession, user):
 
 async def check_device_data_logs(device_public_id : str, db : AsyncSession, user):
     await admin_check(user)
-    device_result = await device_public_id_check(device_public_id)
+    device_result = await device_public_id_check(device_public_id, db)
     try:
         telemetry_logs_stmt = await db.execute(select(TelemetryData, Device.public_id)
                                                .join(Device, TelemetryData.device_id == Device.id)
@@ -280,7 +280,7 @@ async def check_device_data_logs(device_public_id : str, db : AsyncSession, user
 
 async def get_device_tokens(device_public_id : str, db : AsyncSession, user):
     await admin_check(user)
-    device_result = await device_public_id_check(device_public_id)
+    device_result = await device_public_id_check(device_public_id, db)
     try:
         device_tokens_stmt = await db.execute(select(DeviceApiKey, Device.public_id)
                                         .join(Device, DeviceApiKey.device_id == Device.id)
@@ -293,7 +293,7 @@ async def get_device_tokens(device_public_id : str, db : AsyncSession, user):
 
 async def change_token_status(device_public_id : str, db : AsyncSession, user):
     await admin_check(user)
-    device_result = await device_public_id_check(device_public_id)
+    device_result = await device_public_id_check(device_public_id, db)
     token_status_stmt = await db.execute(select(DeviceApiKey)
                                    .where(DeviceApiKey.device_id == device_result.id)
                                    .order_by(DeviceApiKey.created_at.desc()))
