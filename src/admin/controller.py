@@ -2,8 +2,8 @@ from fastapi import APIRouter, Request
 from starlette import status
 from database.core import database_dependency
 from auth.service import user_dependency
-from schemas import CultivationRequest, RoleRequest
-from service import *
+from .schemas import CultivationRequest, RoleRequest
+from .service import *
 from typing import Optional
 
 router = APIRouter()
@@ -17,20 +17,20 @@ async def all_users(db : database_dependency, user : user_dependency, request : 
     return await get_user(public_id, username, email, db, user)
 
 @router.put("/change-user-status/{public_id}", status_code = status.HTTP_204_NO_CONTENT)
-async def change_user_status(public_id : str, new_status : bool, db : database_dependency, user : user_dependency, request : Request):
-    return await update_user_status(public_id, new_status, db, user)
+async def change_user_status(public_id : str, db : database_dependency, user : user_dependency, request : Request):
+    return await update_user_status(public_id, db, user)
     
 @router.put("/change-user-role/{public_id}", status_code = status.HTTP_204_NO_CONTENT)
 async def change_user_role(public_id : str, new_role : RoleRequest, db : database_dependency, user : user_dependency, request : Request):
-    return await update_user_role(db, new_role, user, public_id)
+    return await update_user_role(public_id, new_role, db, user)
 
-@router.put("/reset-user-password/{public_id}", status_code = status.HTTP_204_NO_CONTENT)
+@router.put("/reset-user-password/{public_id}", status_code = status.HTTP_200_OK)
 async def reset_user_password(public_id : str, db : database_dependency, user : user_dependency):
     return await reset_password_by_admin(public_id, db , user)
 
 @router.delete("/delete-user/{public_id}", status_code = status.HTTP_204_NO_CONTENT)
 async def delete_user(public_id : str, db : database_dependency, user : user_dependency, request : Request):
-    return await delete(db, user, public_id)
+    return await delete_account(db, user, public_id)
 
 @router.get("/audit-logs")
 async def audit_logs(db : database_dependency, user : user_dependency, request : Request, user_id_for_logs : Optional[str] = None, device_public_id : Optional[str] = None):
@@ -72,7 +72,7 @@ async def delete_register_device(public_device_id : str, db : database_dependenc
 async def check_device_telemetry_data_logs(public_device_id : str, db : database_dependency, user : user_dependency, request : Request):
     return await check_device_data_logs(public_device_id, db, user)
 
-@router.put("/get-all-device-tokens/{public_device_id}", status_code = status.HTTP_204_NO_CONTENT)
+@router.put("/get-all-device-tokens/{public_device_id}", status_code = status.HTTP_200_OK)
 async def get_all_device_tokens(public_device_id : str, db : database_dependency, user : user_dependency, request : Request):
     return await get_device_tokens(public_device_id, db, user)
 
