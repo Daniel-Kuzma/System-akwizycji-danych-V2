@@ -3,9 +3,8 @@ from fastapi import Depends, HTTPException
 from starlette import status
 from typing import Annotated
 from core.settings import settings
-from database.models import User, AuditLog
+from database.models import User
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timedelta, timezone
 import jwt
@@ -15,6 +14,8 @@ from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import Annotated
 from core.admin_logger import create_audit_log
+from .schemas import CreateUserRequest
+
 SECRET_KEY = settings.secret_key
 ALGORITHM = "HS256"
 
@@ -29,7 +30,7 @@ async def authenticate_user(user : str, password : str, db : database_dependency
         return False
     if crypt_context.verify(password, user_responds.password) == False:
         return False 
-    if not user_responds.user_status:
+    if not user_responds.is_active:
         return False
     return user_responds
 
@@ -54,7 +55,7 @@ async def get_current_user(token : Annotated[str, Depends(oauth2_scheme)]):
 
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
-async def create_user(request, db : AsyncSession):
+async def create_user(request : CreateUserRequest, db : AsyncSession):
     user = User(
                 name = request.name,
                 lastname = request.lastname,
@@ -65,11 +66,11 @@ async def create_user(request, db : AsyncSession):
     try:
         db.add(user)
         await db.flush()
-        await create_audit_log(db, user_id = user.id, action = "CREATE ACCOUNT", entity_type = "user", entity_id = user.id)
+        await create_audit_log(db, user_id = user.id, action = "CREATE ACCOUNT", entity_type = "user", entity_id = str(user.public_id))
         await db.commit()
         return {"detail" : "Successfully created user account"}
-    except Exception:
+    except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 

@@ -1,10 +1,12 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 class Token(BaseModel):
     access_token : str
     token_type : str 
 
 class CreateUserRequest(BaseModel):
+    model_config = ConfigDict(regex_engine="python-re")
+
     name : str = Field(min_length = 3)
     lastname : str 
     username : str = Field(min_length = 4)
