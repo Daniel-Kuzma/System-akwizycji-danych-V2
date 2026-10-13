@@ -1,4 +1,4 @@
-from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
+from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped, relationship
 from sqlalchemy import ForeignKey, Enum, func
 from datetime import datetime
 import uuid
@@ -29,6 +29,8 @@ class TypyOfCultivation(Base):
     min_humidity : Mapped[float] = mapped_column()
     max_humidity : Mapped[float] = mapped_column()
 
+    devices: Mapped[list["Device"]] = relationship(back_populates="cultivations")
+
 class Device(Base):
     __tablename__ = "devices"
     id : Mapped[int] = mapped_column(primary_key = True, index = True)
@@ -37,6 +39,8 @@ class Device(Base):
     type_of_cultivation_id : Mapped[int | None] = mapped_column(ForeignKey("types_of_cultivations.id", ondelete = "SET NULL"))
     device_name : Mapped[str] = mapped_column()
     device_location : Mapped[str] = mapped_column()
+
+    cultivations : Mapped["TypyOfCultivation"] = relationship(back_populates = "devices")
 
 class TelemetryData(Base):
     __tablename__ = "telemetry_data"
@@ -52,7 +56,7 @@ class AuditLog(Base):
     user_id : Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete = "SET NULL"))
     action : Mapped[str] = mapped_column()
     entity_type : Mapped[str] = mapped_column() # user, device, device_api_key, type_of_cultivation
-    entity_id : Mapped[int] = mapped_column() 
+    entity_id : Mapped[str] = mapped_column() 
     created_at : Mapped[datetime] = mapped_column(server_default = func.now())
 
 class DeviceApiKey(Base):
