@@ -2,8 +2,8 @@ from fastapi import APIRouter, Request
 from starlette import status
 from database.core import database_dependency
 from auth.service import user_dependency
-from schemas import ChangeInformationRequest, PasswordRequest, ChangePasswordRequest
-from service import *
+from .schemas import ChangeInformationRequest, PasswordRequest, ChangePasswordRequest
+from .service import *
 
 router = APIRouter()
 
@@ -23,10 +23,10 @@ async def change_user_information(user_request : ChangeInformationRequest, db : 
 async def change_user_password(user_request : ChangePasswordRequest, db : database_dependency, user : user_dependency, request : Request):
     return await update_user_password(user_request, db, user)
 
-@router.put("/reset-user-password", status_code = status.HTTP_204_NO_CONTENT)
+@router.put("/reset-user-password", status_code = status.HTTP_200_OK)
 async def reset_user_password(db : database_dependency, user : user_dependency, request : Request):
-    return await delete(db, user)
+    return await reset_password(db, user)
 
-@router.put("/delete-user-account", status_code = status.HTTP_204_NO_CONTENT)
+@router.delete("/delete-user-account", status_code = status.HTTP_204_NO_CONTENT)
 async def delete_account(user_request : PasswordRequest, db : database_dependency, user : user_dependency, request : Request):
-    return await delete(user_request, db, user)
+    return await delete_user(user_request, db, user)

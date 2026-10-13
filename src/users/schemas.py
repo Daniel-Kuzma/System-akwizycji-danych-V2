@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 class ChangeInformationRequest(BaseModel):
     name : str 
@@ -7,6 +7,8 @@ class ChangeInformationRequest(BaseModel):
     email : str 
 
 class ChangePasswordRequest(BaseModel):
+    model_config = ConfigDict(regex_engine="python-re")
+
     old_password : str = Field(description = "Provide your password")
     new_password : str = Field(min_length = 12, pattern = r"^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).+$",
                            description = "The password should be 12 characters long and contain uppercase and lowercase letters and numbers")
