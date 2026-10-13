@@ -1,11 +1,12 @@
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
-from sqlalchemy import select, update
-from database.models import Device, DeviceApiKey
+from sqlalchemy import select, update, desc, delete
+from sqlalchemy.orm import joinedload
+from database.models import Device, DeviceApiKey, TypyOfCultivation
 from core.admin_logger import create_audit_log
 from auth.service import crypt_context
-from schemas import DeviceNameRequest, ChangeDeviceInformationRequest, DeviceRequest
+from .schemas import DeviceNameRequest, ChangeDeviceInformationRequest, DeviceRequest
 import secrets
 
 async def user_check(user):
@@ -20,25 +21,30 @@ async def device_public_id_check(device_public_id : str, db : AsyncSession):
         raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, detail = "Device with this public id dose not exist")
     return device_result
 
-async def all_user_device(db : AsyncSession, user):
+async def all_account_device(db : AsyncSession, user):
     await user_check(user)
     try:
-        device_stmt = await db.execute(select(Device.device_name, Device.device_location, Device.type_of_cultivation_id)
+        device_stmt = await db.execute(select(Device)
+                                       .options(joinedload(Device.cultivations))
                                        .where(Device.owner_id == user.get("private_id")))
         device_result = device_stmt.scalars().all()
         if not device_result:
             return {"detail" : "You did not add any device"}
         return device_result
     except Exception as e:
-        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server ")
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
     
 async def user_specify_device(public_device_ip, db : AsyncSession, user):
     await user_check(user)
     device_result = await device_public_id_check(public_device_ip, db)
     try:
-        return device_result
+        device_stmt = await db.execute(select(Device, TypyOfCultivation.name_of_cultivation)
+                                       .join(TypyOfCultivation, Device.type_of_cultivation_id == TypyOfCultivation.id)
+                                       .where(Device.id == device_result.id).limit(1))
+        device_output_result = device_stmt.mappings().all()
+        return device_output_result
     except Exception as e:
-        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server ")
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
 
 async def create_device(user_request : DeviceRequest, db : AsyncSession, user):
     await user_check(user)
@@ -54,13 +60,13 @@ async def create_device(user_request : DeviceRequest, db : AsyncSession, user):
                                     token = crypt_context.hash(token))
         db.add(device_token)
         await db.flush()
-        await create_audit_log(db, user_id = user.get("private_id"), action = "CREATE NEW DEVICE", entity_type = "devices", entity_id = new_device.public_id)
-        await create_audit_log(db, user_id = user.get("private_id"), action = "CREATE NEW DEVICE TOKEN", entity_type = "device_api_keys", entity_id = new_device.public_id)
+        await create_audit_log(db, user_id = user.get("private_id"), action = "CREATE NEW DEVICE", entity_type = "devices", entity_id = str(new_device.public_id))
+        await create_audit_log(db, user_id = user.get("private_id"), action = "CREATE NEW DEVICE TOKEN", entity_type = "device_api_keys", entity_id = str(new_device.public_id))
         await db.commit()
         return {"detail" : "Successfully created device"}
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server ")
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
 
 async def update_device_information(user_request : ChangeDeviceInformationRequest, public_device_ip, db : AsyncSession, user):
     await user_check(user)
@@ -70,53 +76,52 @@ async def update_device_information(user_request : ChangeDeviceInformationReques
                                                device_name = user_request.device_name,
                                                device_location = user_request.device_location)
                                                .where(Device.id == device_result.id))
-        await create_audit_log(db, user_id = user.get("private_id"), action = "UPDATE DEVICE", entity_type = "devices", entity_id = device_result.public_id)
+        await create_audit_log(db, user_id = user.get("private_id"), action = "UPDATE DEVICE", entity_type = "devices", entity_id = str(device_result.public_id))
         await db.commit()
         return {"detail" : "Successfully updated device information"}
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server ")
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
 
-
+# zmian na tworzenie nowego a nie update 
 async def update_device_key(public_device_ip, db : AsyncSession, user):
     await user_check(user)
     device_result = await device_public_id_check(public_device_ip, db)
     try:
         token = f"{device_result.public_id}." + secrets.token_hex(8)
         await db.execute(update(DeviceApiKey).values(token = crypt_context.hash(token)).where(DeviceApiKey.device_id == device_result.id))
-        await create_audit_log(db, user_id = user.get("private_id"), action = "UPDATE DEVICE TOKEN", entity_type = "device_api_keys", entity_id = device_result.public_id)
+        await create_audit_log(db, user_id = user.get("private_id"), action = "UPDATE DEVICE TOKEN", entity_type = "device_api_keys", entity_id = str(device_result.public_id))
         await db.commit()
-        return {"detail" : "Successfully updated device token"}
+        return {"detail" : f"Successfully updated device token : {token}"}
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server ")
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
 
 async def change_token_activity(public_device_ip, db : AsyncSession, user):
     await user_check(user)
     device_result = await device_public_id_check(public_device_ip, db)
-    token_activity_stm = await db.execute(select(DeviceApiKey.is_active).where(DeviceApiKey.id == device_result.id).group_by(DeviceApiKey.created_at.desc()).limit(1))
+    token_activity_stm = await db.execute(select(DeviceApiKey.is_active).where(DeviceApiKey.id == device_result.id).order_by(desc(DeviceApiKey.created_at)).limit(1))
     token_activity_result = token_activity_stm.scalar()
     new_token_activity = True if token_activity_result is False else False
     try:
         await db.execute(update(DeviceApiKey).values(is_active = new_token_activity).where(DeviceApiKey.device_id == device_result.id))
-        await create_audit_log(db, user_id = user.get("private_id"), action = "UPDATE DEVICE TOKEN ACTIVITY", entity_type = "device_api_keys", entity_id = device_result.public_id)
+        await create_audit_log(db, user_id = user.get("private_id"), action = "UPDATE DEVICE TOKEN ACTIVITY", entity_type = "device_api_keys", entity_id = str(device_result.public_id))
         await db.commit()
         return {"detail" : "Successfully updated device token activity"}
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server ")
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
 
-async def delete(public_device_ip : str, user_request : DeviceNameRequest, db : AsyncSession, user):
+async def delete_device_by_user(public_device_ip : str, user_request : DeviceNameRequest, db : AsyncSession, user):
     await user_check(user)
     device_result = await device_public_id_check(public_device_ip, db)
     if user_request.device_name != device_result.device_name:
         raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, detail = "Provides the correct name of device")
     try:
+        await create_audit_log(db, user_id = user.get("private_id"), action = "DELETE DEVICE", entity_type = "devices", entity_id = str(device_result.public_id))
         await db.execute(delete(Device).where(Device.id == device_result.id))
-        await create_audit_log(db, user_id = user.get("private_id"), action = "DELETE DEVICE", entity_type = "devices", entity_id = device_result.public_id)
         await db.commit()
         return {"detail" : "Successfully delete device"}
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server ")
-
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")

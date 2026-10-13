@@ -2,14 +2,14 @@ from fastapi import APIRouter, Request
 from starlette import status
 from database.core import database_dependency
 from auth.service import user_dependency
-from schemas import DeviceNameRequest, DeviceRequest, ChangeDeviceInformationRequest
-from service import *
+from .schemas import DeviceNameRequest, DeviceRequest, ChangeDeviceInformationRequest
+from .service import *
 
 router = APIRouter()
 
 @router.get("/all-user-device", status_code = status.HTTP_200_OK)
 async def all_user_device(db : database_dependency, user : user_dependency, request : Request):
-    return await user_device(db, user)
+    return await all_account_device(db, user)
 
 @router.get("/user-device/{public_device_ip}", status_code = status.HTTP_200_OK)
 async def user_device(public_device_ip : str, db : database_dependency, user : user_dependency, request : Request):
@@ -23,7 +23,7 @@ async def create_new_device(user_request : DeviceRequest, db : database_dependen
 async def change_device_information(public_device_ip : str, user_request : ChangeDeviceInformationRequest, db : database_dependency, user : user_dependency, request : Request):
     return await update_device_information(user_request, public_device_ip, db, user)
 
-@router.put("/generate-new-key-for-device/{public_device_ip}", status_code = status.HTTP_204_NO_CONTENT)
+@router.put("/generate-new-key-for-device/{public_device_ip}", status_code = status.HTTP_200_OK)
 async def change_device_information(public_device_ip : str, db : database_dependency, user : user_dependency, request : Request):
     return await update_device_key(public_device_ip, db, user)
 
@@ -33,6 +33,6 @@ async def change_device_token_activity(public_device_ip : str, db : database_dep
 
 @router.delete("/delete-device/{public_device_ip}", status_code = status.HTTP_204_NO_CONTENT)
 async def delete_device(public_device_ip : str, user_request : DeviceNameRequest, db : database_dependency, user : user_dependency, request : Request):
-    return await delete(user_request, public_device_ip, db, user)
+    return await delete_device_by_user(public_device_ip, user_request, db, user)
 
 
