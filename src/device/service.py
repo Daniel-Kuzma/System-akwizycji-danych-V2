@@ -10,7 +10,7 @@ import secrets
 
 async def user_check(user):
     if user.get("role") != "user":
-        HTTPException(status_code = status.HTTP_401_UNAUTHORIZED, detail = "You have not access to this page")
+        HTTPException(status_code = status.HTTP_401_UNAUTHORIZED, detail = "You do not have access to this page")
     pass
 
 async def device_public_id_check(device_public_id : str, db : AsyncSession):
