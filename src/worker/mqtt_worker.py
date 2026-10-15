@@ -1,24 +1,32 @@
-import time
-import paho.mqtt.client as mqtt
-
-mqtt_broker = "localhost" # Adres brokera. Ponieważ skrypt działa tam gdzie Mosquitto, localhost jest ok.
-
-# Funkcja wywoływana za każdym razem, gdy przyjdzie nowa wiadomość
-def on_message(client, userdata, msg):
-    temat = msg.topic
-    # Payload jest w postaci bajtów (b"11"), trzeba to zdekodować do zwykłego tekstu
-    wartosc = msg.payload.decode('utf-8') 
-    print(f"Otrzymano: {temat} -> {wartosc}")
-
-client = mqtt.Client(client_id="User_PC")
-client.on_message = on_message # Przypisanie funkcji do klienta
-
-client.connect(mqtt_broker)
-print("Server is up, nasłuchuje...")
-
-client.loop_start()
-client.subscribe("Temperature")
+from aiomqtt import Client
+from core.settings import settings
+from telemetry.service import save_telemeter_in_database
+from database.core import LocalAsyncSession
+import asyncio
+import ast
 
 
-while True:
-    time.sleep(1)
+
+async def main():
+    async with Client(settings.mqtt_broker) as client:
+        await client.subscribe("Temperature")
+        async for message in client.messages:
+            data = message.payload 
+            decode_data = data.decode("utf-8")
+            data_dict = ast.literal_eval(decode_data)
+            async with LocalAsyncSession() as db:
+                data_save = await save_telemeter_in_database(data_dict.get("token"),
+                                                    data_dict.get("odczyt_temperatury"),
+                                                    data_dict.get("odczyt_wilgotnosc"),
+                                                    db 
+                                                    )
+            if not data_save:
+                print("Token cant be verify")
+            else: 
+                print(data_save)
+                 
+
+# {"odczyt_wilgotnosc": 63.248644, "odczyt_temperatury": 18.649956}
+if __name__ == "__main__":
+   with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
+            runner.run(main())
