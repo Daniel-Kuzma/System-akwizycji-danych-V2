@@ -11,7 +11,7 @@ from auth.service import crypt_context
 
 async def admin_check(user):
     if user.get("role") != "admin":
-        raise HTTPException(status_code = status.HTTP_403_FORBIDDEN, detail = "You have no access to this page")
+        raise HTTPException(status_code = status.HTTP_403_FORBIDDEN, detail = "You do not have access to this page")
     pass
 
 async def user_check(public_id : str, db : AsyncSession):
