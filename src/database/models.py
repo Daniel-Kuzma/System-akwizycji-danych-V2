@@ -29,7 +29,6 @@ class TypyOfCultivation(Base):
     min_humidity : Mapped[float] = mapped_column()
     max_humidity : Mapped[float] = mapped_column()
 
-    devices: Mapped[list["Device"]] = relationship(back_populates="cultivations")
 
 class Device(Base):
     __tablename__ = "devices"
@@ -40,7 +39,6 @@ class Device(Base):
     device_name : Mapped[str] = mapped_column()
     device_location : Mapped[str] = mapped_column()
 
-    cultivations : Mapped["TypyOfCultivation"] = relationship(back_populates = "devices")
 
 class TelemetryData(Base):
     __tablename__ = "telemetry_data"
