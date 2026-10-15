@@ -2,7 +2,6 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 from sqlalchemy import select, update, desc, delete
-from sqlalchemy.orm import joinedload
 from database.models import Device, DeviceApiKey, TypyOfCultivation
 from core.admin_logger import create_audit_log
 from auth.service import crypt_context
@@ -24,10 +23,10 @@ async def device_public_id_check(device_public_id : str, db : AsyncSession):
 async def all_account_device(db : AsyncSession, user):
     await user_check(user)
     try:
-        device_stmt = await db.execute(select(Device)
-                                       .options(joinedload(Device.cultivations))
+        device_stmt = await db.execute(select(*Device.__table__.c, TypyOfCultivation.name_of_cultivation)
+                                       .join(TypyOfCultivation, Device.type_of_cultivation_id == TypyOfCultivation.id)
                                        .where(Device.owner_id == user.get("private_id")))
-        device_result = device_stmt.scalars().all()
+        device_result = device_stmt.mappings().all()
         if not device_result:
             return {"detail" : "You did not add any device"}
         return device_result
@@ -38,7 +37,7 @@ async def user_specify_device(public_device_ip, db : AsyncSession, user):
     await user_check(user)
     device_result = await device_public_id_check(public_device_ip, db)
     try:
-        device_stmt = await db.execute(select(Device, TypyOfCultivation.name_of_cultivation)
+        device_stmt = await db.execute(select(*Device.__table__.c, TypyOfCultivation.name_of_cultivation)
                                        .join(TypyOfCultivation, Device.type_of_cultivation_id == TypyOfCultivation.id)
                                        .where(Device.id == device_result.id).limit(1))
         device_output_result = device_stmt.mappings().all()

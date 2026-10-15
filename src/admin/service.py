@@ -124,24 +124,25 @@ async def get_audit_logs(user_id_for_logs, device_public_id, db : AsyncSession, 
         device_result = await device_public_id_check(device_public_id, db)
     try:
         if user_id_for_logs is None and device_public_id is None:
-            logs_stmt = await db.execute(select(AuditLog, User.public_id)
+            logs_stmt = await db.execute(select(*AuditLog.__table__.c,
+                                                User.public_id)
                                          .join(User, AuditLog.user_id == User.id)
                                          .order_by(AuditLog.created_at.desc()))
-            logs_result = logs_stmt.scalars().all()
+            logs_result = logs_stmt.mappings().all()
             return logs_result
         elif device_public_id is None:
-            logs_for_user_stmt = await db.execute(select(AuditLog, User.public_id)
+            logs_for_user_stmt = await db.execute(select(*AuditLog.__table__.c, User.public_id)
                                                   .join(User, AuditLog.user_id == User.id)
                                                   .where(AuditLog.user_id == user_result.id)
                                                   .order_by(AuditLog.created_at.desc()))
-            logs_for_user_result = logs_for_user_stmt.scalars().all()
+            logs_for_user_result = logs_for_user_stmt.mappings().all()
             return logs_for_user_result
         else:
-            device_logs_stmt = await db.execute(select(AuditLog, User.public_id)
+            device_logs_stmt = await db.execute(select(*AuditLog.__table__.c, User.public_id)
                                                 .join(User, AuditLog.user_id == User.id)
                                                 .where(AuditLog.entity_id == device_result.public_id)
                                                 .order_by(AuditLog.created_at.desc()))
-            device_logs_result = device_logs_stmt.scalars().all()
+            device_logs_result = device_logs_stmt.mappings().all()
             return device_logs_result
     except Exception as e:
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
@@ -222,11 +223,12 @@ async def delete_cult_type(type_of_cultivation, db : AsyncSession, user):
 async def get_all_device(db : AsyncSession, user):
     await admin_check(user)
     try:
-        device_stmt = await db.execute(select(Device, User.public_id, TypyOfCultivation.name_of_cultivation)
+        device_stmt = await db.execute(select(*Device.__table__.c,
+                                              User.public_id.label("owner_public_id"),
+                                              TypyOfCultivation.name_of_cultivation)
                                     .join(User, Device.owner_id == User.id)
-                                    .join(TypyOfCultivation, Device.type_of_cultivation_id == TypyOfCultivation.id)
-                                    .options(defer(Device.id)))
-        device_result = device_stmt.scalars().all()
+                                    .join(TypyOfCultivation, Device.type_of_cultivation_id == TypyOfCultivation.id))
+        device_result = device_stmt.mappings().all()
 
         if not device_result:
             return {"detail" : "There is no device registered yet"}
@@ -239,12 +241,13 @@ async def get_all_user_devices(public_id : str, db : AsyncSession, user):
     await admin_check(user)
     user_result = await user_check(public_id, db)
     try:
-        device_stmt = await db.execute(select(Device, User.public_id, TypyOfCultivation.name_of_cultivation)
+        device_stmt = await db.execute(select(*Device.__table__.c,
+                                              User.public_id.label("owner_public_id"),
+                                              TypyOfCultivation.name_of_cultivation)
                                             .join(User, Device.owner_id == User.id)
                                             .join(TypyOfCultivation, Device.type_of_cultivation_id == TypyOfCultivation.id)
-                                            .where(Device.owner_id == user_result.id)
-                                            .options(defer(Device.id)))
-        device_result = device_stmt.scalars().all()
+                                            .where(Device.owner_id == user_result.id))
+        device_result = device_stmt.mappings().all()
 
         if not device_result:
             return {"detail" : "This user did not add any device yet"}
@@ -256,12 +259,13 @@ async def show_device_information(device_public_id : str, db : AsyncSession, use
     await admin_check(user)
     device_result = await device_public_id_check(device_public_id, db)
     try:
-        device_stmt = await db.execute(select(Device, User.public_id, TypyOfCultivation.name_of_cultivation)
+        device_stmt = await db.execute(select(*Device.__table__.c,
+                                              User.public_id.label("owner_public_id"),
+                                              TypyOfCultivation.name_of_cultivation)
                                             .join(User, Device.owner_id == User.id)
                                             .join(TypyOfCultivation, Device.type_of_cultivation_id == TypyOfCultivation.id)
-                                            .where(Device.id == device_result.id)
-                                            .options(defer(Device.id)))
-        device_result = device_stmt.scalar()            
+                                            .where(Device.id == device_result.id))
+        device_result = device_stmt.mappings()            
         return device_result
     except Exception as e:
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
@@ -281,11 +285,12 @@ async def check_device_data_logs(device_public_id : str, db : AsyncSession, user
     await admin_check(user)
     device_result = await device_public_id_check(device_public_id, db)
     try:
-        telemetry_logs_stmt = await db.execute(select(TelemetryData, Device.public_id)
+        telemetry_logs_stmt = await db.execute(select(*TelemetryData.__table__.c,
+                                                       Device.public_id.label("device_public_id"))
                                                .join(Device, TelemetryData.device_id == Device.id)
                                                .where(TelemetryData.device_id == device_result.id)
-                                               .order_by(TelemetryData.created_at.desc()))
-        telemetry_logs_result = telemetry_logs_stmt.scalars().all()
+                                               .order_by(desc(TelemetryData.created_at)))
+        telemetry_logs_result = telemetry_logs_stmt.mappings().all()
         if not telemetry_logs_result:
             return {"detail" : "None telemetry data logs for this device"}
         return telemetry_logs_result
@@ -296,7 +301,8 @@ async def get_device_tokens(device_public_id : str, db : AsyncSession, user):
     await admin_check(user)
     device_result = await device_public_id_check(device_public_id, db)
     try:
-        device_tokens_stmt = await db.execute(select(DeviceApiKey, Device.public_id)
+        device_tokens_stmt = await db.execute(select(*DeviceApiKey.__table__.c,
+                                                     Device.public_id.label("device_public_id"))
                                         .join(Device, DeviceApiKey.device_id == Device.id)
                                         .where(DeviceApiKey.device_id == device_result.id)
                                         .order_by(desc(DeviceApiKey.created_at)))

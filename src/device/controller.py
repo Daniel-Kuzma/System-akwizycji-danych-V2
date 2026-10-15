@@ -2,16 +2,16 @@ from fastapi import APIRouter, Request
 from starlette import status
 from database.core import database_dependency
 from auth.service import user_dependency
-from .schemas import DeviceNameRequest, DeviceRequest, ChangeDeviceInformationRequest
+from .schemas import DeviceNameRequest, DeviceRequest, ChangeDeviceInformationRequest, AllUserDeviceResponse, USerDeviceResponse
 from .service import *
 
 router = APIRouter()
 
-@router.get("/all-user-device", status_code = status.HTTP_200_OK)
+@router.get("/all-user-device", response_model = list[AllUserDeviceResponse], status_code = status.HTTP_200_OK)
 async def all_user_device(db : database_dependency, user : user_dependency, request : Request):
     return await all_account_device(db, user)
 
-@router.get("/user-device/{public_device_ip}", status_code = status.HTTP_200_OK)
+@router.get("/user-device/{public_device_ip}", response_model = list[USerDeviceResponse], status_code = status.HTTP_200_OK)
 async def user_device(public_device_ip : str, db : database_dependency, user : user_dependency, request : Request):
     return await user_specify_device(public_device_ip, db, user)
 
