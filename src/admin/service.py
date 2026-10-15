@@ -299,7 +299,7 @@ async def get_device_tokens(device_public_id : str, db : AsyncSession, user):
         device_tokens_stmt = await db.execute(select(DeviceApiKey, Device.public_id)
                                         .join(Device, DeviceApiKey.device_id == Device.id)
                                         .where(DeviceApiKey.device_id == device_result.id)
-                                        .order_by(DeviceApiKey.created_at.desc()))
+                                        .order_by(desc(DeviceApiKey.created_at)))
         device_tokens_result = device_tokens_stmt.mappings().all()
         return device_tokens_result
     except Exception as e:
