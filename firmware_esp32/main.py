@@ -3,7 +3,7 @@ from machine import Pin, unique_id, I2C, deepsleep, reset
 import json
 import time 
 # autorska biblioteka do obsługi czujnika
-import sht31 # type: ignore
+import sht31
 import ubinascii
 import network
 import sys
@@ -16,9 +16,9 @@ from umqtt.simple import MQTTClient
 dioda = Pin(15, Pin.OUT) # dioda 
 button = Pin(9, Pin.IN, Pin.PULL_UP) # przycisk
 
-# # implementacja czujnika i magistrali i2c do odczytu danych
-# i2c = I2C(scl=Pin(20), sda=Pin(19), freq=400000) 
-# sensor = sht31.SHT31(i2c, addr=0x44)
+# implementacja czujnika i magistrali i2c do odczytu danych
+i2c = I2C(scl=Pin(20), sda=Pin(19), freq=400000) 
+sensor = sht31.SHT31(i2c, addr=0x44)
 
 #stan początkowy diody na ON
 dioda.value(1)
@@ -112,10 +112,17 @@ client.connect()
 print("Połączono z brokerem")
 
 while True:
-    client.publish("Temperature", "11")
-    print("send")
-    time.sleep(10)
-    
+    temp, humi = sensor.get_temp_humi() # pobranie temperatury i wilgotność 
+        
+    # zapisanie do zmiennej
+    data = {
+        "token" : "8e8bf79e-5008-453f-b5cf-b2fb047f7360.6119e5cb3e6014b6",
+        "odczyt_temperatury" : temp,
+        "odczyt_wilgotnosc" : humi,
+    }
+    client.publish("Temperature", json.dumps(data).encode("utf-8"))
+    print("Wysłano dane")
+    time.sleep(60)
 
 
 
@@ -140,3 +147,5 @@ while True:
     
 #     time.sleep(1)
 #     deepsleep(120000) # głebokie uspienie na 2 min 
+
+
