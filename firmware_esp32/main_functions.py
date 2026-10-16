@@ -1,7 +1,15 @@
 import json
 import time
 import network
+import  os
 
+# sprawdzenie czy plik istnieje 
+def file_exists(filename):
+    try:
+        os.stat(filename)
+        return True
+    except OSError:
+        return False
 
 # funkcja do obsługi migania diodą na płytce 
 def error_blinking(diode, blinking_frequency, how_many_cycle ):
@@ -27,11 +35,10 @@ def wifi_connect(ssid, password):
         return False
     
 # funkcja do zapisu uzyskanego ssid, hasła, url i tokena gdzie maja byc postowane wyniki z czujnika (w pamieci)
-def save_config(ssid, haslo, url, token):
+def save_config(ssid, haslo, token):
     data = {
         "ssid" : ssid,
         "haslo" : haslo,
-        "url" : url,
         "token" : token,
      }
     with open("config.json", "w") as config:
@@ -56,6 +63,19 @@ def web_page():
     </head>
     <body>
         <h1>Hello z sieci ESP32!</h1>
+        <p>test test</p>
+        <form action="/" method="POST">
+            <label for="name">WIFI SSID</label>
+            <input type="text" id="name" name="name" required>
+            
+            <label for="password">WIFI PASSWORD</label>
+            <input type="password" id="password" name="password" required>
+            
+            <label for="api_token">TOKEN</label>
+            <input type="text" id="api_token" name="api_token" required>
+            
+            <button type="submit">Config</button>
+        </form>
     </body>
     </html>
     """
