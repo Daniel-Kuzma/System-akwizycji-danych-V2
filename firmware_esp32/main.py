@@ -1,15 +1,16 @@
 # MicroPico: Initialize MicroPico project
-from machine import Pin, unique_id, I2C, deepsleep, reset 
+from machine import Pin, I2C, deepsleep, reset 
 import json
 import time 
-# autorska biblioteka do obsługi czujnika
-import sht31
-import ubinascii
 import network
 import sys
-import urequests
 import os
+import socket
 
+# plik z funkcjami
+from main_functions import web_page
+# autorska biblioteka do obsługi czujnika
+import sht31
 from umqtt.simple import MQTTClient
 
 # # implementacja czujników i ustawienie ich stanów
@@ -23,48 +24,42 @@ sensor = sht31.SHT31(i2c, addr=0x44)
 #stan początkowy diody na ON
 dioda.value(1)
 
-# funkcja do obsługi migania diodą na płytce 
-def error_blinking(diode, blinking_frequency, how_many_cycle ):
-    for x in range(how_many_cycle):
-        diode.value(1)
-        time.sleep(blinking_frequency)
-        diode.value(0)
-        time.sleep(blinking_frequency)
-    diode.value(1)
 
-# # funkcja do zapisu uzyskanego ssid, hasła, url i tokena gdzie maja byc postowane wyniki z czujnika (w pamieci)
-# def save_config(ssid, haslo, url, token):
-#     data = {
-#         "ssid" : ssid,
-#         "haslo" : haslo,
-#         "url" : url,
-#         "token" : token,
-#     }
-#     with open("config.json", "w") as config:
-#         json.dump(data, config)
 
-# funkcja do wczytywanie danych di konfiguracji (ssid, password, url) jeżeli istnieją w pamięci
-# def load_config():
-#     try:
-#         with open("config.json", "r") as config:
-#             return json.load(config)
-#     except:
-#         return None
+ap = network.WLAN(network.AP_IF)
 
-# funkcja do łączenia sie z wifi
-def wifi_connect(ssid, password):
-    wifi = network.WLAN(network.STA_IF)
-    wifi.active(True)
-    wifi.connect(ssid, password)
-    timeout = 10
-    while not wifi.isconnected() and timeout > 0:
-        time.sleep(1)
-        timeout -= 1
-    if wifi.isconnected():
-        return True
-    else:
-        return False
 
+ap.active(True)
+ap.config(essid='ESP32-Moja-Siec', password='mojehaslo123',  security=network.AUTH_WPA2_PSK)
+time.sleep(1)
+print('Punkt dostępowy aktywny. Nazwa:', ap.config('essid'))
+print('Adres IP płytki:', ap.ifconfig()[0])
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s.bind(('',80))
+s.listen(5)
+
+while True:
+    try:
+        conn, addr = s.accept()
+        print(f'\nUrządzenie połączyło się ze stroną: {addr}')
+        
+        request = conn.recv(1024)
+        response_html = web_page()
+        
+        conn.send('HTTP/1.1 200 OK\n')
+        conn.send('Content-Type: text/html\n')
+        conn.send('Connection: close\n\n')
+        
+        conn.sendall(response_html)
+        conn.close()
+    except Exception as e:
+        print("Wystąpił błąd:", e)
+        
+
+# time.sleep(60)
+# ap.disconnect(True)
 
 # ##########
 # # ten fragment kodu służy do resetowania ustawieni płytki przed konfiguracją wifi i url
@@ -101,28 +96,33 @@ def wifi_connect(ssid, password):
 
 
 # łączeni sie płytki z wifi
-ssid = "ZTE_5D4804"
-haslo = "2LS686RD68"
-while not wifi_connect(ssid, haslo):
-    error_blinking(dioda, 1, 1)
-print("Połączono z wifi ")
-
-client = MQTTClient("client", "192.168.0.105")
-client.connect()
-print("Połączono z brokerem")
-
-while True:
-    temp, humi = sensor.get_temp_humi() # pobranie temperatury i wilgotność 
-        
-    # zapisanie do zmiennej
-    data = {
-        "token" : "8e8bf79e-5008-453f-b5cf-b2fb047f7360.6119e5cb3e6014b6",
-        "odczyt_temperatury" : temp,
-        "odczyt_wilgotnosc" : humi,
-    }
-    client.publish("Temperature", json.dumps(data).encode("utf-8"))
-    print("Wysłano dane")
-    time.sleep(60)
+# ssid = "ZTE_5D4804"
+# haslo = "2LS686RD68"
+# 
+# while not wifi_connect(ssid, haslo):
+#     error_blinking(dioda, 1, 1)
+# print("Połączono z wifi ")
+# 
+# client = MQTTClient("client", "192.168.0.105")
+# client.connect()
+# print("Połączono z brokerem")
+# 
+# while True:
+#     try:
+#         # pobranie temperatury i wilgotność 
+#         temp, humi = sensor.get_temp_humi() 
+#         # zapisanie do zmiennej
+#         data = {
+#             "token" : "8e8bf79e-5008-453f-b5cf-b2fb047f7360.6119e5cb3e6014b6",
+#             "odczyt_temperatury" : temp,
+#             "odczyt_wilgotnosc" : humi,
+#         }
+#         client.publish("Temperature", json.dumps(data).encode("utf-8"))
+#         print("Wysłano dane")
+#         time.sleep(60)
+#         # deepsleep(120000) # głebokie uspienie na 2 min
+#     except Exception as e:
+#         print(e)
 
 
 
@@ -147,5 +147,4 @@ while True:
     
 #     time.sleep(1)
 #     deepsleep(120000) # głebokie uspienie na 2 min 
-
 
