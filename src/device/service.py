@@ -2,11 +2,12 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 from sqlalchemy import select, update, desc, delete
-from database.models import Device, DeviceApiKey, TypyOfCultivation
+from database.models import Device, DeviceApiKey, TypyOfCultivation, CultivationAnalysis
 from core.admin_logger import create_audit_log
 from auth.service import crypt_context
 from .schemas import DeviceNameRequest, ChangeDeviceInformationRequest, DeviceRequest
 import secrets
+from datetime import datetime
 
 async def user_check(user):
     if user.get("role") != "user":
@@ -51,7 +52,8 @@ async def create_device(user_request : DeviceRequest, db : AsyncSession, user):
         new_device = Device(owner_id = user.get("private_id"),
                             type_of_cultivation_id = user_request.type_of_cultivation,
                             device_name = user_request.device_name,
-                            device_location = user_request.device_location)
+                            device_location = user_request.device_location,
+                            is_email_alert_enable = user_request.is_email_alert_enable)
         db.add(new_device)
         await db.flush()
         token = f"{new_device.public_id}." + secrets.token_hex(8)
@@ -73,7 +75,8 @@ async def update_device_information(user_request : ChangeDeviceInformationReques
     try:
         await db.execute(update(Device).values(type_of_cultivation_id = user_request.type_of_cultivation,
                                                device_name = user_request.device_name,
-                                               device_location = user_request.device_location)
+                                               device_location = user_request.device_location,
+                                               is_email_alert_enable = user_request.is_email_alert_enable)
                                                .where(Device.id == device_result.id))
         await create_audit_log(db, user_id = user.get("private_id"), action = "UPDATE DEVICE", entity_type = "devices", entity_id = str(device_result.public_id))
         await db.commit()
@@ -81,6 +84,49 @@ async def update_device_information(user_request : ChangeDeviceInformationReques
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
+
+async def create_new_cultivation_analysis_by_user(device_public_id : str, db : AsyncSession, user):
+    user_check(user)
+    device_result = await device_public_id_check(device_public_id, db)
+    stmt = await db.execute(select(CultivationAnalysis.id)
+                            .where(CultivationAnalysis.device_id == device_result.id)
+                            .where(CultivationAnalysis.analysis_end_date.is_(None)))
+    result = stmt.scalar()
+    if result is not None:
+        raise HTTPException(status_code = status.HTTP_403_FORBIDDEN, detail = "If you want to start new analize you need to end last cultivation analysis")
+    try:
+        new_analize = CultivationAnalysis(
+            device_id = device_result.id,
+            type_of_cultivation_id = device_result.type_of_cultivation_id,
+        )
+        db.add(new_analize)
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
+
+async def stop_cultivation_analysis_by_user(device_public_id : str, db : AsyncSession, user):
+    user_check(user)
+    device_result = await device_public_id_check(device_public_id, db)
+    stmt = await db.execute(select(CultivationAnalysis)
+                            .where(CultivationAnalysis.device_id == device_result.id)
+                            .order_by(desc(CultivationAnalysis.analysis_start_date))
+                            .limit(1))
+    result = stmt.scalar()
+    if result is None:
+        return None
+
+    if result.analysis_end_date:
+        return None
+    
+    try:
+        await db.execute(update(CultivationAnalysis)
+                         .values(analysis_end_date = datetime.now())
+                         .where(CultivationAnalysis.id == result.id))
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
 
 # zmian na tworzenie nowego a nie update 
 async def update_device_key(public_device_ip, db : AsyncSession, user):
