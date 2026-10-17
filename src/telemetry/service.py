@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.models import Device, TelemetryData, DeviceApiKey
+from database.models import Device, TelemetryData, DeviceApiKey, TypyOfCultivation
 from sqlalchemy import select, desc
 from auth.service import crypt_context
 from datetime import datetime
@@ -41,6 +41,18 @@ async def token_verification(key_token : str, device_id : int,  db : AsyncSessio
     
     return True
 
+async def send_email_if_conditions_are_critical(device_id, temperature : float, humidity : float, db : AsyncSession):
+    stmt = await db.execute(select(Device).where(Device.id == device_id).limit(1))
+    result = stmt.scalar()
+    if result.is_email_alert_enable:
+        cultivation_stmt = await db.execute(select(TypyOfCultivation).where(TypyOfCultivation.id == result.type_of_cultivation_id).limit(1))
+        cultivation_result = cultivation_stmt.scalar()
+        if cultivation_result.max_temperature < temperature or cultivation_result.min_temperature > temperature:
+            print("poor temperature conditions") # zamian na wysyłanie maila
+        if cultivation_result.max_humidity < humidity or cultivation_result.min_humidity > humidity:
+            print("poor humidity conditions") # zamian na wysyłanie maila
+
+
 async def save_telemeter_in_database(token : str, temperature : float, humidity : float, db : AsyncSession):
     verification_token = token.split(".")
     device_result = await device_check(verification_token[0], db)
@@ -48,6 +60,7 @@ async def save_telemeter_in_database(token : str, temperature : float, humidity 
     if not device_id:
         return False
     if await token_verification(token, device_id, db):
+        send_email_if_conditions_are_critical(device_id, temperature, humidity, db)
         try: 
             new_telemetry = TelemetryData(device_id = device_id, temperature_reading = temperature, humidity_reading = humidity)
             db.add(new_telemetry)
