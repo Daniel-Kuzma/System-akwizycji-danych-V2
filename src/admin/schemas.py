@@ -49,3 +49,10 @@ class DeviceApiKeyResponse(BaseModel):
     token : str = Field(serialization_alias = "hashed_token")
     is_active : bool
     created_at : datetime
+
+class NewDeviceInformationRequest(BaseModel):
+    model_config = ConfigDict(use_enum_values = True)
+    type_of_cultivation_id : int
+    device_name : str
+    device_location : str  
+    is_email_alert_enable : bool

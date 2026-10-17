@@ -1,13 +1,14 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.models import User, AuditLog, TypyOfCultivation, Device, DeviceApiKey, TelemetryData, DeviceApiKey
+from database.models import User, AuditLog, TypyOfCultivation, Device, DeviceApiKey, TelemetryData, DeviceApiKey, CultivationAnalysis
 from sqlalchemy import select, update, delete, desc
 from sqlalchemy.orm import defer
 from fastapi import HTTPException
 from starlette import status
-from .schemas import CultivationRequest, RoleRequest
+from .schemas import CultivationRequest, RoleRequest, NewDeviceInformationRequest
 from core.admin_logger import create_audit_log
 from password_generator import PasswordGenerator
 from auth.service import crypt_context
+from datetime import datetime
 
 async def admin_check(user):
     if user.get("role") != "admin":
@@ -269,6 +270,70 @@ async def show_device_information(device_public_id : str, db : AsyncSession, use
         return device_result
     except Exception as e:
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
+
+async def update_device_information(device_public_id : str, user_request : NewDeviceInformationRequest, db : AsyncSession, user):
+    user_check(user)
+    device_result = await device_public_id_check(device_public_id, db)
+    if device_result.type_of_cultivation_id != user_request.type_of_cultivation_id:
+        stmt = await db.execute(select(CultivationAnalysis.id)
+                                .where(CultivationAnalysis.device_id == device_result.id)
+                                .where(CultivationAnalysis.analysis_end_date.is_(None)))
+        result = stmt.scalar()
+        if result is not None:
+            raise HTTPException(status_code = status.HTTP_403_FORBIDDEN, detail = "If you want to change cultivation type you need to end cultivation analysis")
+    try:
+        await db.execute(update(Device).values(type_of_cultivation_id = user_request.type_of_cultivation_id,
+                                                device_name = user_request.device_name,
+                                                device_location = user_request.device_location,
+                                                is_email_alert_enable = user_request.is_email_alert_enable)
+                                                .where(Device.id == device_result.id))
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
+
+async def create_new_cultivation_analysis(device_public_id : str, db : AsyncSession, user):
+    user_check(user)
+    device_result = await device_public_id_check(device_public_id, db)
+    stmt = await db.execute(select(CultivationAnalysis.id)
+                            .where(CultivationAnalysis.device_id == device_result.id)
+                            .where(CultivationAnalysis.analysis_end_date.is_(None)))
+    result = stmt.scalar()
+    if result is not None:
+        raise HTTPException(status_code = status.HTTP_403_FORBIDDEN, detail = "If you want to start new analize you need to end last cultivation analysis")
+    try:
+        new_analize = CultivationAnalysis(
+            device_id = device_result.id,
+            type_of_cultivation_id = device_result.type_of_cultivation_id,
+        )
+        db.add(new_analize)
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
+
+async def stop_cultivation_analysis(device_public_id : str, db : AsyncSession, user):
+    user_check(user)
+    device_result = await device_public_id_check(device_public_id, db)
+    stmt = await db.execute(select(CultivationAnalysis)
+                            .where(CultivationAnalysis.device_id == device_result.id)
+                            .order_by(desc(CultivationAnalysis.analysis_start_date))
+                            .limit(1))
+    result = stmt.scalar()
+    if result is None:
+        return None
+
+    if result.analysis_end_date:
+        return None
+    
+    try:
+        await db.execute(update(CultivationAnalysis)
+                         .values(analysis_end_date = datetime.now())
+                         .where(CultivationAnalysis.id == result.id))
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
 
 async def delete_device(device_public_id : str, db : AsyncSession, user):
     await admin_check(user)
