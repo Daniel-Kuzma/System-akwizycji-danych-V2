@@ -4,10 +4,11 @@ from .schemas import Token, CreateUserRequest
 from .service import create_jwt_token, authenticate_user, create_user
 from starlette import status
 from database.core import database_dependency
-
+from core.limiter import limiter
 router = APIRouter()
 
 @router.post("/token", response_model = Token)
+@limiter.limit("8/minute")
 async def login(request_token : oauth2_password_request, db : database_dependency, request : Request):
     login_user = await authenticate_user(request_token.username, request_token.password, db)
     if not login_user:
@@ -16,5 +17,6 @@ async def login(request_token : oauth2_password_request, db : database_dependenc
     return {"access_token" : token, "token_type" : "bearer"}
 
 @router.post("/create-account", status_code = status.HTTP_201_CREATED)
+@limiter.limit("3/minute")
 async def create_user_account(db : database_dependency, create_user_request : CreateUserRequest, request = Request):
     return await create_user(create_user_request, db)
