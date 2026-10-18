@@ -7,6 +7,13 @@ class RoleEnum(Enum):
     ADMIN = "admin"
     USER = "user"
 
+class NewDeviceInformationRequest(BaseModel):
+    model_config = ConfigDict(use_enum_values = True)
+    type_of_cultivation_id : int
+    device_name : str
+    device_location : str  
+    is_email_alert_enable : bool
+
 class CultivationRequest(BaseModel):
     name_of_cultivation : str = Field(min_length = 3, max_length = 100, description = "Provide the name of the crop.")
     min_temperature : float = Field(lt = 51.0, gt = -26.0, description = "Specify the minimum temperature for cultivation.")
@@ -50,9 +57,22 @@ class DeviceApiKeyResponse(BaseModel):
     is_active : bool
     created_at : datetime
 
-class NewDeviceInformationRequest(BaseModel):
-    model_config = ConfigDict(use_enum_values = True)
-    type_of_cultivation_id : int
-    device_name : str
-    device_location : str  
-    is_email_alert_enable : bool
+class SuccessfulRespond(BaseModel):
+    message : str
+
+class UserRespons(BaseModel):
+    public_id : UUID
+    name : str
+    lastname : str
+    username : str
+    email : str
+    is_active : bool
+    user_role : str
+    created_at : datetime
+
+class CultivationRespons(BaseModel):
+    name_of_cultivation : str
+    min_temperature : float
+    max_temperature : float
+    min_humidity : float
+    max_humidity : float
