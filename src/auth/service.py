@@ -68,7 +68,7 @@ async def create_user(request : CreateUserRequest, db : AsyncSession):
         await db.flush()
         await create_audit_log(db, user_id = user.id, action = "CREATE ACCOUNT", entity_type = "user", entity_id = str(user.public_id))
         await db.commit()
-        return {"detail" : "Successfully created user account"}
+        return {"message" : "Successfully created user account"}
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
