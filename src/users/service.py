@@ -10,7 +10,7 @@ from password_generator import PasswordGenerator
 from core.admin_logger import create_audit_log
 
 async def instruction():
-    return {"detail" : "soon"}
+    return {"message" : "soon"}
 
 async def get_user_information(db : AsyncSession, user):
     user_information_stmt = await db.execute(select(User)
@@ -36,7 +36,7 @@ async def update_user_information(user_request : ChangeInformationRequest, db : 
                                             .where(User.id == user.get("private_id")))
         await create_audit_log(db, user_id = user.get("private_id"), action = "UPDATE USER INFORMATION", entity_type = "user", entity_id = user.get("public_id"))
         await db.commit()
-        return {"detail" : "Successfully changed account information"}
+        return {"message" : "Successfully changed account information"}
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
@@ -54,7 +54,7 @@ async def update_user_password(user_request : ChangePasswordRequest, db : AsyncS
         await db.execute(update(User).values(password = new_password).where(User.id == user.get("private_id")))
         await create_audit_log(db, user_id = user.get("private_id"), action = "UPDATE USER PASSWORD", entity_type = "user", entity_id = user.get("public_id"))
         await db.commit()
-        return {"detail" : "Successfully changed password"}
+        return {"message" : "Successfully changed password"}
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
@@ -68,7 +68,7 @@ async def delete_user(user_request : PasswordRequest, db : AsyncSession, user):
             await create_audit_log(db, user_id = user.get("private_id"), action = "DELETE USER ACCOUNT", entity_type = "user", entity_id = user.get("public_id"))
             await db.execute(delete(User).where(User.id == user.get("private_id")))
             await db.commit()
-            return {"detail" : "Successfully deleted account"}
+            return {"message" : "Successfully deleted account"}
         except Exception as e:
             await db.rollback()
             raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
@@ -80,7 +80,7 @@ async def reset_password(db : AsyncSession, user):
         await db.execute(update(User).where(User.id == user.get("private_id")).values(password = crypt_context.hash(random_password)))
         await create_audit_log(db, user_id = user.get("private_id"), action = "RESET USER PASSWORD", entity_type = "user", entity_id = user.get("public_id"))
         await db.commit()
-        return {"detail" : f"New user password: {random_password}, login with new password and change this password"}
+        return {"message" : f"New user password: {random_password}, login with new password and change this password"}
         # tu pewnie bedzie dodane wysyłanie maila z nowym hasłem
     except Exception as e:
         await db.rollback()

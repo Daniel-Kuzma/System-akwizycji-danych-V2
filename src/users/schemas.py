@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
+from datetime import datetime
 
 class ChangeInformationRequest(BaseModel):
     name : str 
@@ -15,3 +16,13 @@ class ChangePasswordRequest(BaseModel):
 
 class PasswordRequest(BaseModel):
     password : str = Field(description = "Provide your password")
+
+class SuccessfulRespond(BaseModel):
+    message : str
+
+class UserInformationRespond(BaseModel):
+    name : str
+    lastname : str
+    username : str
+    email : str
+    created_at : datetime
