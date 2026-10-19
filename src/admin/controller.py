@@ -16,7 +16,7 @@ async def all_users(db : database_dependency, user : user_dependency, request : 
 
 @router.get("/user-information/", response_model = UserRespons, status_code = status.HTTP_200_OK)
 @limiter.limit("100/minute")
-async def all_users(db : database_dependency, user : user_dependency, request : Request, public_id : Optional[str] = None, username : Optional[str] = None, email : Optional[str] = None):
+async def user_information(db : database_dependency, user : user_dependency, request : Request, public_id : Optional[str] = None, username : Optional[str] = None, email : Optional[str] = None):
     return await get_user(public_id, username, email, db, user)
 
 @router.put("/change-user-status/{public_id}", response_model = SuccessfulRespond, status_code = status.HTTP_200_OK)

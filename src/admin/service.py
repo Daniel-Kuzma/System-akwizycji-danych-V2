@@ -9,6 +9,7 @@ from core.admin_logger import create_audit_log
 from password_generator import PasswordGenerator
 from auth.service import crypt_context
 from datetime import datetime
+from sqlalchemy.exc import IntegrityError
 
 async def admin_check(user):
     if user.get("role") != "admin":
@@ -32,7 +33,7 @@ async def device_public_id_check(device_public_id : str, db : AsyncSession):
 async def get_all_users(db : AsyncSession, user):
     await admin_check(user)
     try:
-        stmt = await db.execute(select(User).options(defer(User.id), defer(User.password)))
+        stmt = await db.execute(select(User))
         stmt_result = stmt.scalars().all()
         return stmt_result
     except Exception as e:
@@ -93,7 +94,7 @@ async def update_user_role(public_id : str, new_role : RoleRequest, db : AsyncSe
 async def reset_password_by_admin(public_id : str, db : AsyncSession, user):
     await admin_check(user)
     user_result = await user_check(public_id, db)
-    password_generator = PasswordGenerator()
+    password_generator = PasswordGenerator(minlen = 8, maxlen = 8)
     random_password = password_generator.generate()
     try:
         await db.execute(update(User).where(User.id == user_result.id).values(password = crypt_context.hash(random_password)))
@@ -182,9 +183,12 @@ async def add_new_cultivation(cultivation_request : CultivationRequest, db : Asy
         await create_audit_log(db, user_id = user.get("private_id"), action = "CREATE CULTIVATION", entity_type = "type_of_cultivation", entity_id = new_cultivation.name_of_cultivation)
         await db.commit()
         return {"message" : "Successfully added new cultivation type"}
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code = status.HTTP_409_CONFLICT, detail = "This cultivation already exist")
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
 
 async def update_cultivation(type_of_cultivation, cultivation_request : CultivationRequest, db : AsyncSession, user):
     await admin_check(user)
@@ -268,7 +272,7 @@ async def show_device_information(device_public_id : str, db : AsyncSession, use
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def update_device_information(device_public_id : str, user_request : NewDeviceInformationRequest, db : AsyncSession, user):
-    user_check(user)
+    await admin_check(user)
     device_result = await device_public_id_check(device_public_id, db)
     if device_result.type_of_cultivation_id != user_request.type_of_cultivation_id:
         stmt = await db.execute(select(CultivationAnalysis.id)
@@ -290,7 +294,7 @@ async def update_device_information(device_public_id : str, user_request : NewDe
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
 
 async def create_new_cultivation_analysis(device_public_id : str, db : AsyncSession, user):
-    user_check(user)
+    await admin_check(user)
     device_result = await device_public_id_check(device_public_id, db)
     stmt = await db.execute(select(CultivationAnalysis.id)
                             .where(CultivationAnalysis.device_id == device_result.id)
@@ -311,7 +315,7 @@ async def create_new_cultivation_analysis(device_public_id : str, db : AsyncSess
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
 
 async def stop_cultivation_analysis(device_public_id : str, db : AsyncSession, user):
-    user_check(user)
+    await admin_check(user)
     device_result = await device_public_id_check(device_public_id, db)
     stmt = await db.execute(select(CultivationAnalysis)
                             .where(CultivationAnalysis.device_id == device_result.id)
@@ -319,10 +323,10 @@ async def stop_cultivation_analysis(device_public_id : str, db : AsyncSession, u
                             .limit(1))
     result = stmt.scalar()
     if result is None:
-        return None
+        return {"message" : "There is no active analysis"}
 
     if result.analysis_end_date:
-        return None
+        return {"message" : "Already end cultivation analyze"}
     
     try:
         await db.execute(update(CultivationAnalysis)
@@ -332,7 +336,7 @@ async def stop_cultivation_analysis(device_public_id : str, db : AsyncSession, u
         return {"message" : "Successfully end cultivation analysis"}
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
 
 async def delete_device(device_public_id : str, db : AsyncSession, user):
     await admin_check(user)
