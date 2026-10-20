@@ -44,7 +44,7 @@ class Device(Base):
 class CultivationAnalysis(Base):
     __tablename__ = "cultivation_analyzes"
     id : Mapped[int] = mapped_column(primary_key = True, index = True)
-    device_id : Mapped[int] = mapped_column(ForeignKey("devices.id"), onupdate = "CASCADE")
+    device_id : Mapped[int] = mapped_column(ForeignKey("devices.id", onupdate = "CASCADE"))
     type_of_cultivation_id : Mapped[int | None] = mapped_column(ForeignKey("types_of_cultivations.id", ondelete = "SET NULL"))
     analysis_start_date : Mapped[datetime] = mapped_column(server_default = func.now())
     analysis_end_date : Mapped[datetime] = mapped_column(nullable = True)
