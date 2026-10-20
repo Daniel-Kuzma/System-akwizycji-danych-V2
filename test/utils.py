@@ -1,10 +1,10 @@
 import pytest_asyncio
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from src.main import app
-from src.database import models
-from src.auth.service import crypt_context, get_current_user
-from src.database.core import get_db
+from main import app
+from database import models
+from auth.service import get_current_user, crypt_context
+from database.core import get_db
 from fastapi.testclient import TestClient
 import pytest
 from datetime import datetime, timedelta
@@ -22,14 +22,13 @@ async def override_get_db():
     async with TestingSessionLocal() as db:
         yield db
 
-def override_get_current_user():
-    return {"username": "jan123", "public_id": "07c206d2-3449-451a-9cd7-86a10f6ec18f", "private_id" : 1, "role": "user"}
-
 def override_get_current_user_v2():
     return {"username": "admin", "public_id": "70f41b40-a522-4ba8-b1cd-ab6a1ca7febd", "private_id" : 2, "role": "admin"}
 
-app.dependency_overrides[get_db] = override_get_db
-app.dependency_overrides[get_current_user] = override_get_current_user 
+def override_get_current_user():
+    return {"username": "jan123", "public_id": "07c206d2-3449-451a-9cd7-86a10f6ec18f", "private_id" : 1, "role": "user"}
+
+app.dependency_overrides[get_current_user] = override_get_current_user_v2
 
 client = TestClient(app)
 
@@ -146,8 +145,7 @@ async def test_data_cultivation_analyzes():
     async with TestingSessionLocal() as db:
         db.add(analize)
         await db.commit()
-        for u in analize:
-            await db.refresh(u) 
+        await db.refresh(analize) 
         yield analize
 
 @pytest_asyncio.fixture
@@ -203,22 +201,20 @@ async def test_data_audit_logs():
     async with TestingSessionLocal() as db:
         db.add(log)
         await db.commit()
-        for u in log:
-            await db.refresh(u) 
+        await db.refresh(log) 
         yield log
 
 @pytest_asyncio.fixture
-async def test_data_audit_logs():
+async def test_data_api_keys():
     key = models.DeviceApiKey(
         id = 1,
-        device_id = q,
-        token = "8e8bf79e-5008-453f-b5cf-b2fb047f7360.6119e5cb3e6014b6",
+        device_id = 1,
+        token = crypt_context.hash("8e8bf79e-5008-453f-b5cf-b2fb047f7360.6119e5cb3e6014b6"),
         is_active = True,
         created_at = datetime.now())
 
     async with TestingSessionLocal() as db:
         db.add(key)
         await db.commit()
-        for u in key:
-            await db.refresh(u) 
+        await db.refresh(key) 
         yield key
