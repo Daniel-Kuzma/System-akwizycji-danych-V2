@@ -13,21 +13,30 @@ async def instruction():
     return {"message" : "soon"}
 
 async def get_user_information(db : AsyncSession, user):
-    user_information_stmt = await db.execute(select(User)
-                                             .where(User.id == user.get("private_id"))
-                                             .options(load_only(User.name,
-                                                                User.lastname,
-                                                                User.username,
-                                                                User.email,
-                                                                User.public_id,
-                                                                User.created_at)).limit(1))
-    user_information_result = user_information_stmt.scalar()
     try: 
+        user_information_stmt = await db.execute(select(User)
+                                                .where(User.id == user.get("private_id"))
+                                                .limit(1))
+        user_information_result = user_information_stmt.scalar()
+    
         return user_information_result
     except Exception as e:
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def update_user_information(user_request : ChangeInformationRequest, db : AsyncSession, user):
+    user_stmt = await db.execute(select(User).where(User.id == user.get("private_id")).limit(1))
+    user_result = user_stmt.scalar()
+    if user_result.email != user_request.email:
+        check_stmt = await db.execute(select(User).where(User.email == user_request.email).limit(1))
+        check_result = check_stmt.one_or_none()
+        if check_result is not None:
+            raise HTTPException(status_code = status.HTTP_409_CONFLICT, detail = "User with this email already exist")
+    
+    if user_result.username != user_request.username:
+        check_stmt = await db.execute(select(User).where(User.username == user_request.username).limit(1))
+        check_result = check_stmt.one_or_none()
+        if check_result is not None:
+            raise HTTPException(status_code = status.HTTP_409_CONFLICT, detail = "User with this username already exist")
     try: 
         await db.execute(update(User).values(name = user_request.name,
                                             lastname = user_request.lastname,
@@ -46,7 +55,7 @@ async def update_user_password(user_request : ChangePasswordRequest, db : AsyncS
     user_password_result = user_password_stmt.scalar()
 
     if not crypt_context.verify(user_request.old_password, user_password_result):
-        raise HTTPException(status_code = status.HTTP_401_UNAUTHORIZED, detail = "You provide wrong password. Try again")
+        raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, detail = "You provide wrong password. Try again")
     
     new_password = crypt_context.hash(user_request.new_password)
     
@@ -58,20 +67,6 @@ async def update_user_password(user_request : ChangePasswordRequest, db : AsyncS
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
-
-async def delete_user(user_request : PasswordRequest, db : AsyncSession, user):
-        user_password_stmt = await db.execute(select(User.password).where(User.id == user.get("private_id")).limit(1))
-        user_password_result = user_password_stmt.scalar()
-        if not crypt_context.verify(user_request.password, user_password_result):
-            raise HTTPException(status_code = status.HTTP_401_UNAUTHORIZED, detail = "You provide wrong password. Try again")
-        try:
-            await create_audit_log(db, user_id = user.get("private_id"), action = "DELETE USER ACCOUNT", entity_type = "user", entity_id = user.get("public_id"))
-            await db.execute(delete(User).where(User.id == user.get("private_id")))
-            await db.commit()
-            return {"message" : "Successfully deleted account"}
-        except Exception as e:
-            await db.rollback()
-            raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def reset_password(db : AsyncSession, user):
     password_generator = PasswordGenerator()
@@ -85,3 +80,18 @@ async def reset_password(db : AsyncSession, user):
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
+
+async def delete_user(user_request : PasswordRequest, db : AsyncSession, user):
+        user_password_stmt = await db.execute(select(User.password).where(User.id == user.get("private_id")).limit(1))
+        user_password_result = user_password_stmt.scalar()
+        if not crypt_context.verify(user_request.password, user_password_result):
+            raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, detail = "You provide wrong password. Try again")
+        try:
+            await create_audit_log(db, user_id = user.get("private_id"), action = "DELETE USER ACCOUNT", entity_type = "user", entity_id = user.get("public_id"))
+            await db.execute(delete(User).where(User.id == user.get("private_id")))
+            await db.commit()
+            return {"message" : "Successfully deleted account"}
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
+

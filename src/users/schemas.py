@@ -21,6 +21,7 @@ class SuccessfulRespond(BaseModel):
     message : str
 
 class UserInformationRespond(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     name : str
     lastname : str
     username : str
