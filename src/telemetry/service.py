@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from starlette import status
 from database.models import TelemetryData
 from datetime import timedelta
+import uuid
 
 TIME_MAPPING = {
     "LAST_HOUR" : timedelta(hours=1),
@@ -74,7 +75,7 @@ async def save_telemeter_in_database(token : str, temperature : float, humidity 
             return e
     return False
 
-async def get_telemeter_based_on_time(public_device_id : str, time : str, db : AsyncSession, user):
+async def get_telemeter_based_on_time(public_device_id : uuid.UUID, time : str, db : AsyncSession, user):
     await check_user(user)
     device_result = await device_check(public_device_id, db)
     if not device_result:
@@ -89,7 +90,7 @@ async def get_telemeter_based_on_time(public_device_id : str, time : str, db : A
     except Exception as e:
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
 
-async def analyze_the_temperature_result(public_device_id : str, db : AsyncSession, user):
+async def analyze_the_temperature_result(public_device_id : uuid.UUID, db : AsyncSession, user):
     await check_user(user)
     device_result = await device_check(public_device_id, db)
     if not device_result:
@@ -100,7 +101,7 @@ async def analyze_the_temperature_result(public_device_id : str, db : AsyncSessi
                                         .order_by(desc(CultivationAnalysis.analysis_start_date)))
     cultivation_result = cultivation_stmt.mappings().all()
     if not cultivation_result:
-        return []
+        return {"percentage": 0.0}
     end_date_flag = datetime.now() if cultivation_result[0]["analysis_end_date"] == None else cultivation_result[0]["analysis_end_date"]
     stmt = await db.execute(select(func.count()).select_from(TelemetryData)
                             .where(TelemetryData.device_id == device_result.id)
@@ -115,10 +116,13 @@ async def analyze_the_temperature_result(public_device_id : str, db : AsyncSessi
                             .where(TelemetryData.created_at <= end_date_flag))
     result_of_all_data = count_stmt.scalar()
 
+    if result_of_all_data == 0:
+        return {"percentage": 0.0}
+
     percentage_result = round(result_of_good_data/result_of_all_data*100,1)
     return {"percentage" : percentage_result}
 
-async def analyze_the_humidity_result(public_device_id : str, db : AsyncSession, user):
+async def analyze_the_humidity_result(public_device_id : uuid.UUID, db : AsyncSession, user):
     await check_user(user)
     device_result = await device_check(public_device_id, db)
     if not device_result:
@@ -129,7 +133,7 @@ async def analyze_the_humidity_result(public_device_id : str, db : AsyncSession,
                                         .order_by(desc(CultivationAnalysis.analysis_start_date)))
     cultivation_result = cultivation_stmt.mappings().all()
     if not cultivation_result:
-        return []
+        return {"percentage": 0.0}
     end_date_flag = datetime.now() if cultivation_result[0]["analysis_end_date"] == None else cultivation_result[0]["analysis_end_date"]
     stmt = await db.execute(select(func.count()).select_from(TelemetryData)
                             .where(TelemetryData.device_id == device_result.id)
@@ -143,6 +147,9 @@ async def analyze_the_humidity_result(public_device_id : str, db : AsyncSession,
                             .where(TelemetryData.created_at >= cultivation_result[0]["analysis_start_date"])
                             .where(TelemetryData.created_at <= end_date_flag))
     result_of_all_data = count_stmt.scalar()
+
+    if result_of_all_data == 0:
+        return {"percentage": 0.0}
 
     percentage_result = round(result_of_good_data/result_of_all_data*100,1)
     return {"percentage" : percentage_result}
