@@ -8,7 +8,7 @@ class DeviceRequest(BaseModel):
     is_email_alert_enable : bool = Field(description = "Provide if you want to get mails with critical information about cultivation", default = False)
 
 class ChangeDeviceInformationRequest(BaseModel):
-    type_of_cultivation : int = Field(description = "Choose typ of cultivation")
+    type_of_cultivation_id : int = Field(description = "Choose typ of cultivation")
     device_name : str = Field(description = "Provide name for your device")
     device_location : str = Field(description = "Provide location for your device")
     is_email_alert_enable : bool = Field(description = "Provide if you want to get mails with critical information about cultivation", default = False)
@@ -28,7 +28,11 @@ class USerDeviceResponse(BaseModel):
     device_name : str
     device_location : str
     name_of_cultivation : str
-    is_email_alert_enable : str
+    is_email_alert_enable : bool
 
 class SuccessfulRespond(BaseModel):
     message : str
+
+class SuccessfulRespondToken(BaseModel):
+    message : str
+    token : str

@@ -39,7 +39,7 @@ async def user_specify_device(public_device_ip, db : AsyncSession, user):
         device_stmt = await db.execute(select(*Device.__table__.c, TypyOfCultivation.name_of_cultivation)
                                        .join(TypyOfCultivation, Device.type_of_cultivation_id == TypyOfCultivation.id)
                                        .where(Device.id == device_result.id).limit(1))
-        device_output_result = device_stmt.mappings().all()
+        device_output_result = device_stmt.mappings().first()
         return device_output_result
     except Exception as e:
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
@@ -62,7 +62,7 @@ async def create_device(user_request : DeviceRequest, db : AsyncSession, user):
         await create_audit_log(db, user_id = user.get("private_id"), action = "CREATE NEW DEVICE", entity_type = "devices", entity_id = str(new_device.public_id))
         await create_audit_log(db, user_id = user.get("private_id"), action = "CREATE NEW DEVICE TOKEN", entity_type = "device_api_keys", entity_id = str(new_device.public_id))
         await db.commit()
-        return {"message" : "Successfully created device"}
+        return {"message" : f"Successfully created device. This is device token: {token}"}
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
@@ -70,8 +70,14 @@ async def create_device(user_request : DeviceRequest, db : AsyncSession, user):
 async def update_device_information(user_request : ChangeDeviceInformationRequest, public_device_ip, db : AsyncSession, user):
     await user_check(user)
     device_result = await device_public_id_check(public_device_ip, db)
+    stmt = await db.execute(select(CultivationAnalysis.id)
+                            .where(CultivationAnalysis.device_id == device_result.id)
+                            .where(CultivationAnalysis.analysis_end_date.is_(None)))
+    result = stmt.scalar()
+    if result is not None:
+        raise HTTPException(status_code = status.HTTP_403_FORBIDDEN, detail = "If you want to start new analize you need to end last cultivation analysis")
     try:
-        await db.execute(update(Device).values(type_of_cultivation_id = user_request.type_of_cultivation,
+        await db.execute(update(Device).values(type_of_cultivation_id = user_request.type_of_cultivation_id,
                                                device_name = user_request.device_name,
                                                device_location = user_request.device_location,
                                                is_email_alert_enable = user_request.is_email_alert_enable)
@@ -113,10 +119,10 @@ async def stop_cultivation_analysis_by_user(device_public_id : str, db : AsyncSe
                             .limit(1))
     result = stmt.scalar()
     if result is None:
-        return None
+        return {"message" : "There is no active analysis"}
 
     if result.analysis_end_date:
-        return None
+        return {"message" : "Already end cultivation analyze"}
     
     try:
         await db.execute(update(CultivationAnalysis)
@@ -137,7 +143,8 @@ async def update_device_key(public_device_ip, db : AsyncSession, user):
         await db.execute(update(DeviceApiKey).values(token = crypt_context.hash(token)).where(DeviceApiKey.device_id == device_result.id))
         await create_audit_log(db, user_id = user.get("private_id"), action = "UPDATE DEVICE TOKEN", entity_type = "device_api_keys", entity_id = str(device_result.public_id))
         await db.commit()
-        return {"message" : f"Successfully updated device token : {token}"}
+        return {"message" : "Successfully updated token",
+                "token" : token}
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
