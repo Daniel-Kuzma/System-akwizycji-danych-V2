@@ -36,7 +36,7 @@ client = TestClient(app)
 async def setup_database():
     async with engine.begin() as conn:
         await conn.run_sync(models.Base.metadata.create_all)
-    yield
+    yield 
     async with engine.begin() as conn:
         await conn.run_sync(models.Base.metadata.drop_all)
 
@@ -139,7 +139,7 @@ async def test_data_cultivation_analyzes():
         id = 1,
         device_id = 1,
         type_of_cultivation_id = 1,
-        analysis_start_date = datetime.now(),
+        analysis_start_date = datetime.now() - timedelta(minutes = 50),
         analysis_end_date = None)
 
     async with TestingSessionLocal() as db:
@@ -153,30 +153,30 @@ async def test_data_telemetry_data():
     telemetry_1 = models.TelemetryData(
         id = 1,
         device_id = 1,
-        temperature_reading = -1,
+        temperature_reading = -5,
         humidity_reading = 90,
-        created_at = datetime.now())
+        created_at = datetime.now() - timedelta(minutes = 10))
     
     telemetry_2 = models.TelemetryData(
         id = 2,
         device_id = 1,
-        temperature_reading = 20,
-        humidity_reading = 50,
-        created_at = datetime.now() + timedelta(minutes = 1))
+        temperature_reading = 10,
+        humidity_reading = 30,
+        created_at = datetime.now() - timedelta(minutes = 20))
     
     telemetry_3 = models.TelemetryData(
         id = 3,
         device_id = 1,
-        temperature_reading = 20,
-        humidity_reading = 50,
-        created_at = datetime.now() + timedelta(minutes = 2))
+        temperature_reading = 10,
+        humidity_reading = 30,
+        created_at = datetime.now() - timedelta(minutes = 30))
 
     telemetry_4 = models.TelemetryData(
         id = 4,
         device_id = 1,
-        temperature_reading = 20,
-        humidity_reading = 55,
-        created_at = datetime.now() + timedelta(minutes = 3))
+        temperature_reading = 10,
+        humidity_reading = 30,
+        created_at = datetime.now() - timedelta(minutes = 40))
 
     telemetry = [telemetry_1, telemetry_2, telemetry_3, telemetry_4]
 
