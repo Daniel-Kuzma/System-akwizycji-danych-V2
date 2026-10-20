@@ -56,6 +56,16 @@ async def get_current_user(token : Annotated[str, Depends(oauth2_scheme)]):
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
 async def create_user(request : CreateUserRequest, db : AsyncSession):
+
+    stmt_username = await db.execute(select(User).where(User.username == request.username))
+    if stmt_username.scalar() is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already registered")
+
+    # 2. Sprawdzenie czy istnieje email
+    stmt_email = await db.execute(select(User).where(User.email == request.email))
+    if stmt_email.scalar() is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this email already registered")
+    
     user = User(
                 name = request.name,
                 lastname = request.lastname,

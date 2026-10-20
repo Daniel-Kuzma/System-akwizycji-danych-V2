@@ -18,5 +18,5 @@ async def login(request_token : oauth2_password_request, db : database_dependenc
 
 @router.post("/create-account",  response_model = SuccessfulRespond, status_code = status.HTTP_201_CREATED)
 @limiter.limit("3/minute")
-async def create_user_account(db : database_dependency, create_user_request : CreateUserRequest, request = Request):
+async def create_user_account(db : database_dependency, create_user_request : CreateUserRequest, request : Request):
     return await create_user(create_user_request, db)
