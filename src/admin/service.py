@@ -94,7 +94,7 @@ async def update_user_role(public_id : str, new_role : RoleRequest, db : AsyncSe
 async def reset_password_by_admin(public_id : str, db : AsyncSession, user):
     await admin_check(user)
     user_result = await user_check(public_id, db)
-    password_generator = PasswordGenerator(minlen = 8, maxlen = 8)
+    password_generator = PasswordGenerator()
     random_password = password_generator.generate()
     try:
         await db.execute(update(User).where(User.id == user_result.id).values(password = crypt_context.hash(random_password)))
@@ -142,7 +142,7 @@ async def get_audit_logs(user_id_for_logs, device_public_id, db : AsyncSession, 
         else:
             device_logs_stmt = await db.execute(select(*AuditLog.__table__.c, User.public_id)
                                                 .join(User, AuditLog.user_id == User.id)
-                                                .where(AuditLog.entity_id == device_result.public_id)
+                                                .where(AuditLog.entity_id == str(device_result.public_id))
                                                 .order_by(AuditLog.created_at.desc()))
             device_logs_result = device_logs_stmt.mappings().all()
             return device_logs_result
@@ -275,7 +275,7 @@ async def update_device_information(device_public_id : str, user_request : NewDe
     await admin_check(user)
     device_result = await device_public_id_check(device_public_id, db)
     if device_result.type_of_cultivation_id != user_request.type_of_cultivation_id:
-        stmt = await db.execute(select(CultivationAnalysis.id)
+        stmt = await db.execute(select(CultivationAnalysis)
                                 .where(CultivationAnalysis.device_id == device_result.id)
                                 .where(CultivationAnalysis.analysis_end_date.is_(None)))
         result = stmt.scalar()
