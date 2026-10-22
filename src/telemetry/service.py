@@ -8,6 +8,7 @@ from starlette import status
 from database.models import TelemetryData
 from datetime import timedelta
 import uuid
+from core.server_logger import logger
 
 TIME_MAPPING = {
     "LAST_HOUR" : timedelta(hours=1),
@@ -71,8 +72,7 @@ async def save_telemeter_in_database(token : str, temperature : float, humidity 
             return f"Added data for device: {verification_token[0]}, "
         except Exception as e:
             await db.rollback()
-            # dodanie server log z informacją co jest nie tak
-            return e
+            logger.exception("Problem with saving telemetry data from esp32")
     return False
 
 async def get_telemeter_based_on_time(public_device_id : uuid.UUID, time : str, db : AsyncSession, user):
@@ -88,6 +88,7 @@ async def get_telemeter_based_on_time(public_device_id : uuid.UUID, time : str, 
         stmt = await db.execute(select(TelemetryData).where(TelemetryData.device_id == device_result.id).where(TelemetryData.created_at >= data_flag))
         return stmt.scalars().all()
     except Exception as e:
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
 
 async def analyze_the_temperature_result(public_device_id : uuid.UUID, db : AsyncSession, user):
@@ -95,65 +96,72 @@ async def analyze_the_temperature_result(public_device_id : uuid.UUID, db : Asyn
     device_result = await device_check(public_device_id, db)
     if not device_result:
             raise HTTPException(status_code = status.HTTP_401_UNAUTHORIZED, detail = "This device does not exist")
-    cultivation_stmt = await db.execute(select(*CultivationAnalysis.__table__.c, *TypyOfCultivation.__table__.c)
-                                        .join(TypyOfCultivation, CultivationAnalysis.type_of_cultivation_id == TypyOfCultivation.id)
-                                        .where(CultivationAnalysis.device_id == device_result.id)
-                                        .order_by(desc(CultivationAnalysis.analysis_start_date)))
-    cultivation_result = cultivation_stmt.mappings().all()
-    if not cultivation_result:
-        return {"percentage": 0.0}
-    end_date_flag = datetime.now() if cultivation_result[0]["analysis_end_date"] == None else cultivation_result[0]["analysis_end_date"]
-    stmt = await db.execute(select(func.count()).select_from(TelemetryData)
-                            .where(TelemetryData.device_id == device_result.id)
-                            .where(TelemetryData.temperature_reading >= cultivation_result[0]["min_temperature"])
-                            .where(TelemetryData.temperature_reading <= cultivation_result[0]["max_temperature"])
-                            .where(TelemetryData.created_at >= cultivation_result[0]["analysis_start_date"])
-                            .where(TelemetryData.created_at <= end_date_flag))
-    result_of_good_data = stmt.scalar()
-    count_stmt = await db.execute(select(func.count()).select_from(TelemetryData)
-                            .where(TelemetryData.device_id == device_result.id)
-                            .where(TelemetryData.created_at >= cultivation_result[0]["analysis_start_date"])
-                            .where(TelemetryData.created_at <= end_date_flag))
-    result_of_all_data = count_stmt.scalar()
+    try:
+        cultivation_stmt = await db.execute(select(*CultivationAnalysis.__table__.c, *TypyOfCultivation.__table__.c)
+                                            .join(TypyOfCultivation, CultivationAnalysis.type_of_cultivation_id == TypyOfCultivation.id)
+                                            .where(CultivationAnalysis.device_id == device_result.id)
+                                            .order_by(desc(CultivationAnalysis.analysis_start_date)))
+        cultivation_result = cultivation_stmt.mappings().all()
+        if not cultivation_result:
+            return {"percentage": 0.0}
+        end_date_flag = datetime.now() if cultivation_result[0]["analysis_end_date"] == None else cultivation_result[0]["analysis_end_date"]
+        stmt = await db.execute(select(func.count()).select_from(TelemetryData)
+                                .where(TelemetryData.device_id == device_result.id)
+                                .where(TelemetryData.temperature_reading >= cultivation_result[0]["min_temperature"])
+                                .where(TelemetryData.temperature_reading <= cultivation_result[0]["max_temperature"])
+                                .where(TelemetryData.created_at >= cultivation_result[0]["analysis_start_date"])
+                                .where(TelemetryData.created_at <= end_date_flag))
+        result_of_good_data = stmt.scalar()
+        count_stmt = await db.execute(select(func.count()).select_from(TelemetryData)
+                                .where(TelemetryData.device_id == device_result.id)
+                                .where(TelemetryData.created_at >= cultivation_result[0]["analysis_start_date"])
+                                .where(TelemetryData.created_at <= end_date_flag))
+        result_of_all_data = count_stmt.scalar()
 
-    if result_of_all_data == 0:
-        return {"percentage": 0.0}
+        if result_of_all_data == 0:
+            return {"percentage": 0.0}
 
-    percentage_result = round(result_of_good_data/result_of_all_data*100,1)
-    return {"percentage" : percentage_result}
+        percentage_result = round(result_of_good_data/result_of_all_data*100,1)
+        return {"percentage" : percentage_result}
+    except Exception as e:
+        logger.exception("Critical problem with server")
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")    
 
 async def analyze_the_humidity_result(public_device_id : uuid.UUID, db : AsyncSession, user):
     await check_user(user)
     device_result = await device_check(public_device_id, db)
     if not device_result:
             raise HTTPException(status_code = status.HTTP_401_UNAUTHORIZED, detail = "This device does not exist")
-    cultivation_stmt = await db.execute(select(*CultivationAnalysis.__table__.c, *TypyOfCultivation.__table__.c)
-                                        .join(TypyOfCultivation, CultivationAnalysis.type_of_cultivation_id == TypyOfCultivation.id)
-                                        .where(CultivationAnalysis.device_id == device_result.id)
-                                        .order_by(desc(CultivationAnalysis.analysis_start_date)))
-    cultivation_result = cultivation_stmt.mappings().all()
-    if not cultivation_result:
-        return {"percentage": 0.0}
-    end_date_flag = datetime.now() if cultivation_result[0]["analysis_end_date"] == None else cultivation_result[0]["analysis_end_date"]
-    stmt = await db.execute(select(func.count()).select_from(TelemetryData)
-                            .where(TelemetryData.device_id == device_result.id)
-                            .where(TelemetryData.humidity_reading >= cultivation_result[0]["min_humidity"])
-                            .where(TelemetryData.humidity_reading <= cultivation_result[0]["max_humidity"])
-                            .where(TelemetryData.created_at >= cultivation_result[0]["analysis_start_date"])
-                            .where(TelemetryData.created_at <= end_date_flag))
-    result_of_good_data = stmt.scalar()
-    count_stmt = await db.execute(select(func.count()).select_from(TelemetryData)
-                            .where(TelemetryData.device_id == device_result.id)
-                            .where(TelemetryData.created_at >= cultivation_result[0]["analysis_start_date"])
-                            .where(TelemetryData.created_at <= end_date_flag))
-    result_of_all_data = count_stmt.scalar()
+    try:
+        cultivation_stmt = await db.execute(select(*CultivationAnalysis.__table__.c, *TypyOfCultivation.__table__.c)
+                                            .join(TypyOfCultivation, CultivationAnalysis.type_of_cultivation_id == TypyOfCultivation.id)
+                                            .where(CultivationAnalysis.device_id == device_result.id)
+                                            .order_by(desc(CultivationAnalysis.analysis_start_date)))
+        cultivation_result = cultivation_stmt.mappings().all()
+        if not cultivation_result:
+            return {"percentage": 0.0}
+        end_date_flag = datetime.now() if cultivation_result[0]["analysis_end_date"] == None else cultivation_result[0]["analysis_end_date"]
+        stmt = await db.execute(select(func.count()).select_from(TelemetryData)
+                                .where(TelemetryData.device_id == device_result.id)
+                                .where(TelemetryData.humidity_reading >= cultivation_result[0]["min_humidity"])
+                                .where(TelemetryData.humidity_reading <= cultivation_result[0]["max_humidity"])
+                                .where(TelemetryData.created_at >= cultivation_result[0]["analysis_start_date"])
+                                .where(TelemetryData.created_at <= end_date_flag))
+        result_of_good_data = stmt.scalar()
+        count_stmt = await db.execute(select(func.count()).select_from(TelemetryData)
+                                .where(TelemetryData.device_id == device_result.id)
+                                .where(TelemetryData.created_at >= cultivation_result[0]["analysis_start_date"])
+                                .where(TelemetryData.created_at <= end_date_flag))
+        result_of_all_data = count_stmt.scalar()
 
-    if result_of_all_data == 0:
-        return {"percentage": 0.0}
+        if result_of_all_data == 0:
+            return {"percentage": 0.0}
 
-    percentage_result = round(result_of_good_data/result_of_all_data*100,1)
-    return {"percentage" : percentage_result}
-
+        percentage_result = round(result_of_good_data/result_of_all_data*100,1)
+        return {"percentage" : percentage_result}
+    except Exception as e:
+        logger.exception("Critical problem with server")
+        raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")    
 
     
     
