@@ -10,6 +10,7 @@ from password_generator import PasswordGenerator
 from auth.service import crypt_context
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
+from core.server_logger import logger
 
 async def admin_check(user):
     if user.get("role") != "admin":
@@ -37,6 +38,7 @@ async def get_all_users(db : AsyncSession, user):
         stmt_result = stmt.scalars().all()
         return stmt_result
     except Exception as e:
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def get_user(public_id : str, username : str, email : str, db : AsyncSession, user):
@@ -61,6 +63,7 @@ async def get_user(public_id : str, username : str, email : str, db : AsyncSessi
     try:
         return stmt_result
     except Exception as e:
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def update_user_status(public_id : str, db : AsyncSession, user):
@@ -76,6 +79,7 @@ async def update_user_status(public_id : str, db : AsyncSession, user):
         return {"message" : "Successfully changed user status"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
 
 
@@ -89,6 +93,7 @@ async def update_user_role(public_id : str, new_role : RoleRequest, db : AsyncSe
         return {"message" : "Successfully changed user role"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def reset_password_by_admin(public_id : str, db : AsyncSession, user):
@@ -104,6 +109,7 @@ async def reset_password_by_admin(public_id : str, db : AsyncSession, user):
         # send mail
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def delete_account(public_id : str, db : AsyncSession, user):
@@ -116,6 +122,7 @@ async def delete_account(public_id : str, db : AsyncSession, user):
         return {"message" : "Successfully deleted user"}
     except Exception as e:
         db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def get_audit_logs(user_id_for_logs, device_public_id, db : AsyncSession, user):
@@ -147,6 +154,7 @@ async def get_audit_logs(user_id_for_logs, device_public_id, db : AsyncSession, 
             device_logs_result = device_logs_stmt.mappings().all()
             return device_logs_result
     except Exception as e:
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def get_cultivations(cultivation_type, db : AsyncSession, user):
@@ -158,6 +166,7 @@ async def get_cultivations(cultivation_type, db : AsyncSession, user):
     try:
         return result
     except Exception as e:
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def all_cultivations(db: AsyncSession, user):
@@ -167,6 +176,7 @@ async def all_cultivations(db: AsyncSession, user):
         result = stmt.scalars().all()
         return result
     except Exception as e:
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def add_new_cultivation(cultivation_request : CultivationRequest, db : AsyncSession, user):
@@ -188,6 +198,7 @@ async def add_new_cultivation(cultivation_request : CultivationRequest, db : Asy
         raise HTTPException(status_code = status.HTTP_409_CONFLICT, detail = "This cultivation already exist")
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
 
 async def update_cultivation(type_of_cultivation, cultivation_request : CultivationRequest, db : AsyncSession, user):
@@ -210,6 +221,7 @@ async def update_cultivation(type_of_cultivation, cultivation_request : Cultivat
         return {"message" : "Successfully updated cultivation"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def delete_cult_type(type_of_cultivation, db : AsyncSession, user):
@@ -226,6 +238,7 @@ async def delete_cult_type(type_of_cultivation, db : AsyncSession, user):
         return {"message" : "Successfully deleted cultivation"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def get_all_device(db : AsyncSession, user):
@@ -239,6 +252,7 @@ async def get_all_device(db : AsyncSession, user):
         device_result = device_stmt.mappings().all()
         return device_result
     except Exception as e:
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def get_all_user_devices(public_id : str, db : AsyncSession, user):
@@ -254,6 +268,7 @@ async def get_all_user_devices(public_id : str, db : AsyncSession, user):
         device_result = device_stmt.mappings().all()
         return device_result
     except Exception as e:
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def show_device_information(device_public_id : str, db : AsyncSession, user):
@@ -269,6 +284,7 @@ async def show_device_information(device_public_id : str, db : AsyncSession, use
         device_result = device_stmt.mappings()            
         return device_result
     except Exception as e:
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def update_device_information(device_public_id : str, user_request : NewDeviceInformationRequest, db : AsyncSession, user):
@@ -291,6 +307,7 @@ async def update_device_information(device_public_id : str, user_request : NewDe
         return {"message" : "Successfully changed device information"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
 
 async def create_new_cultivation_analysis(device_public_id : str, db : AsyncSession, user):
@@ -312,6 +329,7 @@ async def create_new_cultivation_analysis(device_public_id : str, db : AsyncSess
         return {"message" : "Start new cultivation analysis"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
 
 async def stop_cultivation_analysis(device_public_id : str, db : AsyncSession, user):
@@ -336,6 +354,7 @@ async def stop_cultivation_analysis(device_public_id : str, db : AsyncSession, u
         return {"message" : "Successfully end cultivation analysis"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
 
 async def delete_device(device_public_id : str, db : AsyncSession, user):
@@ -348,6 +367,7 @@ async def delete_device(device_public_id : str, db : AsyncSession, user):
         return {"message" : "Successfully delete device"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def check_device_data_logs(device_public_id : str, db : AsyncSession, user):
@@ -362,6 +382,7 @@ async def check_device_data_logs(device_public_id : str, db : AsyncSession, user
         telemetry_logs_result = telemetry_logs_stmt.mappings().all()
         return telemetry_logs_result
     except Exception as e:
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def get_device_tokens(device_public_id : str, db : AsyncSession, user):
@@ -376,6 +397,7 @@ async def get_device_tokens(device_public_id : str, db : AsyncSession, user):
         device_tokens_result = device_tokens_stmt.mappings().all()
         return device_tokens_result
     except Exception as e:
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def change_token_status(device_public_id : str, db : AsyncSession, user):
@@ -394,5 +416,6 @@ async def change_token_status(device_public_id : str, db : AsyncSession, user):
         return {"message" : "Successfully change token status"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
