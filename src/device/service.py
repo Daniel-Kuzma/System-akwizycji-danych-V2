@@ -8,6 +8,7 @@ from auth.service import crypt_context
 from .schemas import DeviceNameRequest, ChangeDeviceInformationRequest, DeviceRequest
 import secrets
 from datetime import datetime
+from core.server_logger import logger
 
 async def user_check(user):
     if user.get("role") != "user":
@@ -30,6 +31,7 @@ async def all_account_device(db : AsyncSession, user):
         device_result = device_stmt.mappings().all()
         return device_result
     except Exception as e:
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
     
 async def user_specify_device(public_device_ip, db : AsyncSession, user):
@@ -42,6 +44,7 @@ async def user_specify_device(public_device_ip, db : AsyncSession, user):
         device_output_result = device_stmt.mappings().first()
         return device_output_result
     except Exception as e:
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
 
 async def create_device(user_request : DeviceRequest, db : AsyncSession, user):
@@ -65,6 +68,7 @@ async def create_device(user_request : DeviceRequest, db : AsyncSession, user):
         return {"message" : f"Successfully created device. This is device token: {token}"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
 
 async def update_device_information(user_request : ChangeDeviceInformationRequest, public_device_ip, db : AsyncSession, user):
@@ -87,6 +91,7 @@ async def update_device_information(user_request : ChangeDeviceInformationReques
         return {"message" : "Successfully updated device information"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
 
 async def create_new_cultivation_analysis_by_user(device_public_id : str, db : AsyncSession, user):
@@ -108,6 +113,7 @@ async def create_new_cultivation_analysis_by_user(device_public_id : str, db : A
         return {"message" : "Start new cultivation analysis"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
 
 async def stop_cultivation_analysis_by_user(device_public_id : str, db : AsyncSession, user):
@@ -132,9 +138,9 @@ async def stop_cultivation_analysis_by_user(device_public_id : str, db : AsyncSe
         return {"message" : "Successfully end cultivation analysis"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server")
 
-# zmian na tworzenie nowego a nie update 
 async def update_device_key(public_device_ip, db : AsyncSession, user):
     await user_check(user)
     device_result = await device_public_id_check(public_device_ip, db)
@@ -162,6 +168,7 @@ async def change_token_activity(public_device_ip, db : AsyncSession, user):
         return {"message" : "Successfully updated device token activity"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
 
 async def delete_device_by_user(public_device_ip : str, user_request : DeviceNameRequest, db : AsyncSession, user):
@@ -176,4 +183,5 @@ async def delete_device_by_user(public_device_ip : str, user_request : DeviceNam
         return {"message" : "Successfully delete device"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = f"Critical problem with server {e}")
