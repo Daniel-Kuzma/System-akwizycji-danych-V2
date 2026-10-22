@@ -16,4 +16,4 @@ file_handler.setFormatter(formatter)
 logger.addHandler(stream_handler) # wysyłanie do konsoli (potem do usunięcia)
 logger.addHandler(file_handler)
 
-logger.setLevel(logger.INFO)
+logger.setLevel(logging.INFO)
