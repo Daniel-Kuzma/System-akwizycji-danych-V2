@@ -8,6 +8,7 @@ from sqlalchemy.orm import load_only
 from auth.service import crypt_context
 from password_generator import PasswordGenerator
 from core.admin_logger import create_audit_log
+from core.server_logger import logger
 
 async def instruction():
     return {"message" : "soon"}
@@ -21,6 +22,7 @@ async def get_user_information(db : AsyncSession, user):
     
         return user_information_result
     except Exception as e:
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def update_user_information(user_request : ChangeInformationRequest, db : AsyncSession, user):
@@ -48,6 +50,7 @@ async def update_user_information(user_request : ChangeInformationRequest, db : 
         return {"message" : "Successfully changed account information"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def update_user_password(user_request : ChangePasswordRequest, db : AsyncSession, user):
@@ -66,6 +69,7 @@ async def update_user_password(user_request : ChangePasswordRequest, db : AsyncS
         return {"message" : "Successfully changed password"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def reset_password(db : AsyncSession, user):
@@ -79,6 +83,7 @@ async def reset_password(db : AsyncSession, user):
         # tu pewnie bedzie dodane wysyłanie maila z nowym hasłem
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 async def delete_user(user_request : PasswordRequest, db : AsyncSession, user):
@@ -93,5 +98,6 @@ async def delete_user(user_request : PasswordRequest, db : AsyncSession, user):
             return {"message" : "Successfully deleted account"}
         except Exception as e:
             await db.rollback()
+            logger.exception("Critical problem with server")
             raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
