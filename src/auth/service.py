@@ -15,6 +15,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import Annotated
 from core.admin_logger import create_audit_log
 from .schemas import CreateUserRequest
+from core.server_logger import logger
 
 SECRET_KEY = settings.secret_key
 ALGORITHM = "HS256"
@@ -81,6 +82,7 @@ async def create_user(request : CreateUserRequest, db : AsyncSession):
         return {"message" : "Successfully created user account"}
     except Exception as e:
         await db.rollback()
+        logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
 
