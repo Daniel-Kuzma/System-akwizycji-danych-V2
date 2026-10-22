@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 
 app.dependency_overrides[get_db] =  override_get_db
-# app.dependency_overrides[get_current_user] = override_get_current_user
+
 
 @pytest.mark.asyncio
 async def test_login_and_creating_token(test_data_users):
