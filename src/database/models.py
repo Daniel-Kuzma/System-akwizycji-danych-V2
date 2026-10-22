@@ -62,7 +62,7 @@ class AuditLog(Base):
     id : Mapped[int] = mapped_column(primary_key = True, index = True)
     user_id : Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete = "SET NULL"))
     action : Mapped[str] = mapped_column()
-    entity_type : Mapped[str] = mapped_column() # user, device, device_api_key, type_of_cultivation
+    entity_type : Mapped[str] = mapped_column()
     entity_id : Mapped[str] = mapped_column() 
     created_at : Mapped[datetime] = mapped_column(server_default = func.now())
 
