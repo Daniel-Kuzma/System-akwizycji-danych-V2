@@ -25,8 +25,6 @@ async def main():
             else: 
                 print(data_save)
                  
-
-# {"odczyt_wilgotnosc": 63.248644, "odczyt_temperatury": 18.649956}
 if __name__ == "__main__":
    with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
             runner.run(main())
