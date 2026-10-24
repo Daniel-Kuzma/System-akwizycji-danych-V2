@@ -13,6 +13,8 @@ from apscheduler.executors.asyncio import AsyncIOExecutor
 from contextlib import asynccontextmanager
 from database.core import LocalAsyncSession
 from core.schedules import change_device_status
+from fastapi.middleware.cors import CORSMiddleware
+from .core.settings import settings
 
 async def check_device():
     async with LocalAsyncSession() as db:
@@ -30,6 +32,14 @@ async def lifespan(app : FastAPI):
     scheduler.shutdown()
 
 app = FastAPI(lifespan = lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[settings.frontend_url], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
