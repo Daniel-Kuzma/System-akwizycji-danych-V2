@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 from database.core import LocalAsyncSession
 from core.schedules import change_device_status
 from fastapi.middleware.cors import CORSMiddleware
-from .core.settings import settings
+from core.settings import settings
 
 async def check_device():
     async with LocalAsyncSession() as db:
