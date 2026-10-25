@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 from starlette import status
-from .schemas import PasswordRequest, ChangeInformationRequest, ChangePasswordRequest
+from .schemas import PasswordRequest, ChangeInformationRequest, ChangePasswordRequest, EmailRequest
 from sqlalchemy import select, update, delete
 from database.models import User
 from sqlalchemy.orm import load_only
@@ -72,9 +72,10 @@ async def update_user_password(user_request : ChangePasswordRequest, db : AsyncS
         logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
-async def reset_password(db : AsyncSession, user):
+async def reset_password(user_request : EmailRequest, db : AsyncSession, user):
     password_generator = PasswordGenerator()
     random_password = password_generator.generate()
+    user_email = user_request.email
     try:
         await db.execute(update(User).where(User.id == user.get("private_id")).values(password = crypt_context.hash(random_password)))
         await create_audit_log(db, user_id = user.get("private_id"), action = "RESET USER PASSWORD", entity_type = "user", entity_id = user.get("public_id"))

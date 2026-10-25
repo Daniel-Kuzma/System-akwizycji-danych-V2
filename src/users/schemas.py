@@ -17,6 +17,9 @@ class ChangePasswordRequest(BaseModel):
 class PasswordRequest(BaseModel):
     password : str = Field(description = "Provide your password")
 
+class EmailRequest(BaseModel):
+    email : str
+
 class SuccessfulRespond(BaseModel):
     message : str
 

@@ -29,8 +29,8 @@ async def change_user_password(user_request : ChangePasswordRequest, db : databa
 
 @router.put("/reset-user-password", response_model = SuccessfulRespond, status_code = status.HTTP_200_OK)
 @limiter.limit("50/minute")
-async def reset_user_password(db : database_dependency, user : user_dependency, request : Request):
-    return await reset_password(db, user)
+async def reset_user_password(user_request : EmailRequest, db : database_dependency, user : user_dependency, request : Request):
+    return await reset_password(user_request, db, user)
 
 @router.delete("/delete-user-account", response_model = SuccessfulRespond, status_code = status.HTTP_200_OK)
 @limiter.limit("50/minute")
