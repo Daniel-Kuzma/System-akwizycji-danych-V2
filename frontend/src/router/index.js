@@ -2,6 +2,10 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   { 
+    path: '/', 
+    redirect: '/login' 
+  },
+  { 
     path: '/login', 
     component: () => import('../views/LoginView.vue') 
   },
@@ -17,6 +21,16 @@ const routes = [
   { 
     path: '/urzadzenia/dodaj', 
     component: () => import('../views/AddDeviceView.vue'),
+    meta: { requiresAuth: true, requiresUser: true } 
+  },
+  { 
+    path: '/urzadzenia/:id', 
+    component: () => import('../views/DeviceDetailView.vue'),
+    meta: { requiresAuth: true, requiresUser: true } 
+  },
+  { 
+    path: '/urzadzenia/:id/ustawienia', 
+    component: () => import('../views/DeviceSettingsView.vue'),
     meta: { requiresAuth: true, requiresUser: true } 
   },
   { 
