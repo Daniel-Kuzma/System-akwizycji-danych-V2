@@ -11,6 +11,7 @@ from auth.service import crypt_context
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 from core.server_logger import logger
+from core.email_sender import send_email
 
 async def admin_check(user):
     if user.get("role") != "admin":
@@ -105,8 +106,7 @@ async def reset_password_by_admin(public_id : str, db : AsyncSession, user):
         await db.execute(update(User).where(User.id == user_result.id).values(password = crypt_context.hash(random_password)))
         await create_audit_log(db, user_id = user.get("private_id"), action = "RESET PASSWORD", entity_type = "user", entity_id = str(user_result.public_id))
         await db.commit()
-        return {"message" : f"New user password: {random_password}"}
-        # send mail
+        await send_email(user_result.email, "New user password", f"This your new password: {random_password}, after login change this password")
     except Exception as e:
         await db.rollback()
         logger.exception("Critical problem with server")
