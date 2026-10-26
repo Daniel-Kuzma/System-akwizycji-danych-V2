@@ -9,6 +9,7 @@ from auth.service import crypt_context
 from password_generator import PasswordGenerator
 from core.admin_logger import create_audit_log
 from core.server_logger import logger
+from core.email_sender import send_email
 
 async def instruction():
     return {"message" : "soon"}
@@ -80,8 +81,7 @@ async def reset_password(user_request : EmailRequest, db : AsyncSession, user):
         await db.execute(update(User).where(User.id == user.get("private_id")).values(password = crypt_context.hash(random_password)))
         await create_audit_log(db, user_id = user.get("private_id"), action = "RESET USER PASSWORD", entity_type = "user", entity_id = user.get("public_id"))
         await db.commit()
-        return {"message" : f"New user password: {random_password}, login with new password and change this password"}
-        # tu pewnie bedzie dodane wysyłanie maila z nowym hasłem
+        await send_email(user_email, "New user password", f"This your new password: {random_password}, after login change this password")
     except Exception as e:
         await db.rollback()
         logger.exception("Critical problem with server")
