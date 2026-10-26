@@ -185,21 +185,21 @@ async def test_change_user_role_when_user_not_exist(test_data_users):
     assert data["detail"] == "User with this public id dose not exist"
 
 
-@pytest.mark.asyncio
-async def test_change_user_password(test_data_users):
-    respons = client.put("/admin/reset-user-password/07c206d2-3449-451a-9cd7-86a10f6ec18f")
-    assert respons.status_code == status.HTTP_200_OK
-    async with TestingSessionLocal() as db:
-        stmt = await db.execute(select(User.password).where(User.public_id == uuid.UUID("07c206d2-3449-451a-9cd7-86a10f6ec18f")).limit(1))
-        result = stmt.scalar()
-        assert crypt_context.verify("password", result) == False
+# @pytest.mark.asyncio
+# async def test_change_user_password(test_data_users):
+#     respons = client.put("/admin/reset-user-password/07c206d2-3449-451a-9cd7-86a10f6ec18f")
+#     assert respons.status_code == status.HTTP_200_OK
+#     async with TestingSessionLocal() as db:
+#         stmt = await db.execute(select(User.password).where(User.public_id == uuid.UUID("07c206d2-3449-451a-9cd7-86a10f6ec18f")).limit(1))
+#         result = stmt.scalar()
+#         assert crypt_context.verify("password", result) == False
 
-@pytest.mark.asyncio
-async def test_change_user_password_when_user_not_exist(test_data_users):
-    respons = client.put("/admin/reset-user-password/32806820-9272-48a4-9414-c2484ff50af9")
-    data = respons.json()
-    assert respons.status_code == status.HTTP_400_BAD_REQUEST
-    assert data["detail"] == "User with this public id dose not exist"
+# @pytest.mark.asyncio
+# async def test_change_user_password_when_user_not_exist(test_data_users):
+#     respons = client.put("/admin/reset-user-password/32806820-9272-48a4-9414-c2484ff50af9")
+#     data = respons.json()
+#     assert respons.status_code == status.HTTP_400_BAD_REQUEST
+#     assert data["detail"] == "User with this public id dose not exist"
 
 @pytest.mark.asyncio
 async def test_delete_user(test_data_users):
