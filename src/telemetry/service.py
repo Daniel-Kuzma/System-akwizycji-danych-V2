@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.models import Device, TelemetryData, DeviceApiKey, TypyOfCultivation, CultivationAnalysis
+from database.models import Device, TelemetryData, DeviceApiKey, TypyOfCultivation, CultivationAnalysis, User
 from sqlalchemy import select, desc, func
 from auth.service import crypt_context
 from datetime import datetime
@@ -9,6 +9,7 @@ from database.models import TelemetryData
 from datetime import timedelta
 import uuid
 from core.server_logger import logger
+from core.email_sender import send_email
 
 TIME_MAPPING = {
     "LAST_HOUR" : timedelta(hours=1),
@@ -51,10 +52,12 @@ async def send_email_if_conditions_are_critical(device_id, temperature : float, 
     if result.is_email_alert_enable:
         cultivation_stmt = await db.execute(select(TypyOfCultivation).where(TypyOfCultivation.id == result.type_of_cultivation_id).limit(1))
         cultivation_result = cultivation_stmt.scalar()
+        user_email_stmt = await db.execute(select(User.email).where(User.id == result.owner_id).limit(1))
+        user_email_result = user_email_stmt.scalar()
         if cultivation_result.max_temperature < temperature or cultivation_result.min_temperature > temperature:
-            print("poor temperature conditions") # zamian na wysyłanie maila
+            await send_email(user_email_result, "Poor temperature conditions", f"{result.device_name} in the {result.device_location} recorded unfavorable temperature conditions: {temperature} °C")
         if cultivation_result.max_humidity < humidity or cultivation_result.min_humidity > humidity:
-            print("poor humidity conditions") # zamian na wysyłanie maila
+            await send_email(user_email_result, "Poor humidity conditions", f"{result.device_name} in the {result.device_location} recorded unfavorable humidity conditions: {humidity} %")
 
 
 async def save_telemeter_in_database(token : str, temperature : float, humidity : float, db : AsyncSession):
