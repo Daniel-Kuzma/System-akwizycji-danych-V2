@@ -1,22 +1,22 @@
 <template>
   <div class="space-y-8">
     <!-- Wyszukiwarka -->
-    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-      <h2 class="text-xl font-bold mb-4">Szukaj użytkownika</h2>
-      <div class="flex gap-4">
-        <input v-model="searchQuery.email" type="text" placeholder="Email" class="border p-2 rounded w-full">
-        <input v-model="searchQuery.username" type="text" placeholder="Nazwa użytkownika" class="border p-2 rounded w-full">
-        <input v-model="searchQuery.public_id" type="text" placeholder="Public ID" class="border p-2 rounded w-full">
-        <button @click="searchUser" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Szukaj</button>
-        <button @click="loadUsers" class="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300">Reset</button>
+    <div class="bg-white dark:bg-custom-card p-6 rounded-lg shadow-sm border border-gray-200 dark:border-custom-border transition-colors">
+      <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-custom-light">Szukaj użytkownika</h2>
+      <div class="flex flex-wrap md:flex-nowrap gap-4">
+        <input v-model="searchQuery.email" type="text" placeholder="Email" class="border border-gray-300 dark:border-custom-border p-2 rounded w-full bg-white dark:bg-custom-dark text-gray-900 dark:text-custom-light transition-colors">
+        <input v-model="searchQuery.username" type="text" placeholder="Nazwa użytkownika" class="border border-gray-300 dark:border-custom-border p-2 rounded w-full bg-white dark:bg-custom-dark text-gray-900 dark:text-custom-light transition-colors">
+        <input v-model="searchQuery.public_id" type="text" placeholder="Public ID" class="border border-gray-300 dark:border-custom-border p-2 rounded w-full bg-white dark:bg-custom-dark text-gray-900 dark:text-custom-light transition-colors">
+        <button @click="searchUser" class="bg-blue-600 dark:bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors w-full md:w-auto">Szukaj</button>
+        <button @click="loadUsers" class="bg-gray-200 dark:bg-custom-dark text-gray-800 dark:text-custom-light border border-transparent dark:border-custom-border px-4 py-2 rounded hover:bg-gray-300 dark:hover:bg-gray-800 transition-colors w-full md:w-auto">Reset</button>
       </div>
     </div>
 
     <!-- Tabela użytkowników -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <div class="px-6 py-4 bg-gray-50 border-b font-bold text-gray-700">Konta użytkowników</div>
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50 text-xs text-gray-500 uppercase">
+    <div class="bg-white dark:bg-custom-card rounded-lg shadow-sm border border-gray-200 dark:border-custom-border overflow-hidden transition-colors">
+      <div class="px-6 py-4 bg-gray-50 dark:bg-custom-dark border-b border-gray-200 dark:border-custom-border font-bold text-gray-700 dark:text-custom-light transition-colors">Konta użytkowników</div>
+      <table class="min-w-full divide-y divide-gray-200 dark:divide-custom-border">
+        <thead class="bg-gray-50 dark:bg-custom-dark text-xs text-gray-500 dark:text-custom-muted uppercase transition-colors">
           <tr>
             <th class="px-6 py-3 text-left">Dane / Email</th>
             <th class="px-6 py-3 text-left">Public ID</th>
@@ -24,22 +24,22 @@
             <th class="px-6 py-3 text-right">Akcje</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200 text-sm">
+        <tbody class="divide-y divide-gray-200 dark:divide-custom-border text-sm transition-colors">
           <tr v-for="u in displayedUsers" :key="u.public_id">
             <td class="px-6 py-4">
-              <div class="font-bold">{{ u.name }} {{ u.lastname }}</div>
-              <div class="text-gray-500">{{ u.email }} | @{{ u.username }}</div>
+              <div class="font-bold text-gray-800 dark:text-custom-light">{{ u.name }} {{ u.lastname }}</div>
+              <div class="text-gray-500 dark:text-custom-muted">{{ u.email }} | {{ u.username }}</div>
             </td>
-            <td class="px-6 py-4 text-gray-500 font-mono text-xs">{{ u.public_id }}</td>
+            <td class="px-6 py-4 text-gray-500 dark:text-custom-muted font-mono text-xs">{{ u.public_id }}</td>
             <td class="px-6 py-4">
-              <span :class="u.user_role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100'" class="px-2 py-1 rounded text-xs mr-2">{{ u.user_role }}</span>
-              <span :class="u.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'" class="px-2 py-1 rounded text-xs">{{ u.is_active ? 'Aktywny' : 'Blokada' }}</span>
+              <span :class="u.user_role === 'admin' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'" class="px-2 py-1 rounded text-xs mr-2 transition-colors">{{ u.user_role }}</span>
+              <span :class="u.is_active ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'" class="px-2 py-1 rounded text-xs transition-colors">{{ u.is_active ? 'Aktywny' : 'Blokada' }}</span>
             </td>
             <td class="px-6 py-4 text-right space-x-2">
-              <button @click="toggleRole(u)" class="text-blue-600 hover:underline">Rola</button>
-              <button @click="toggleStatus(u.public_id)" class="text-orange-600 hover:underline">Status</button>
-              <button @click="resetPwd(u.public_id)" class="text-yellow-600 hover:underline">Hasło</button>
-              <button @click="delUser(u.public_id)" class="text-red-600 hover:underline">Usuń</button>
+              <button @click="toggleRole(u)" class="text-blue-600 dark:text-blue-400 hover:underline">Rola</button>
+              <button @click="toggleStatus(u.public_id)" class="text-orange-600 dark:text-orange-400 hover:underline">Status</button>
+              <button @click="resetPwd(u.public_id)" class="text-yellow-600 dark:text-yellow-500 hover:underline">Hasło</button>
+              <button @click="delUser(u.public_id)" class="text-red-600 dark:text-red-400 hover:underline">Usuń</button>
             </td>
           </tr>
         </tbody>
@@ -47,18 +47,18 @@
     </div>
 
     <!-- Logi Audytowe -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <div class="px-6 py-4 bg-gray-50 border-b flex justify-between items-center">
-        <span class="font-bold text-gray-700">Dziennik zdarzeń (Audit Logs)</span>
+    <div class="bg-white dark:bg-custom-card rounded-lg shadow-sm border border-gray-200 dark:border-custom-border overflow-hidden transition-colors">
+      <div class="px-6 py-4 bg-gray-50 dark:bg-custom-dark border-b border-gray-200 dark:border-custom-border flex justify-between items-center transition-colors">
+        <span class="font-bold text-gray-700 dark:text-custom-light">Dziennik zdarzeń (Audit Logs)</span>
         <div class="flex gap-2">
-          <input v-model="logFilter.user_id" placeholder="Filtruj wg User ID" class="border p-1 text-sm rounded">
-          <input v-model="logFilter.device_id" placeholder="Filtruj wg Device ID" class="border p-1 text-sm rounded">
-          <button @click="loadLogs" class="bg-gray-200 text-sm px-3 py-1 rounded">Odśwież</button>
+          <input v-model="logFilter.user_id" placeholder="Filtruj wg User ID" class="border border-gray-300 dark:border-custom-border bg-white dark:bg-custom-dark text-gray-900 dark:text-custom-light p-1 text-sm rounded transition-colors">
+          <input v-model="logFilter.device_id" placeholder="Filtruj wg Device ID" class="border border-gray-300 dark:border-custom-border bg-white dark:bg-custom-dark text-gray-900 dark:text-custom-light p-1 text-sm rounded transition-colors">
+          <button @click="loadLogs" class="bg-gray-200 dark:bg-custom-dark text-gray-800 dark:text-custom-light border border-transparent dark:border-custom-border hover:bg-gray-300 dark:hover:bg-gray-800 text-sm px-3 py-1 rounded transition-colors">Odśwież</button>
         </div>
       </div>
       <div class="max-h-64 overflow-y-auto">
-        <table class="min-w-full divide-y divide-gray-200 text-sm">
-          <thead class="bg-gray-50 text-xs text-gray-500 uppercase sticky top-0">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-custom-border text-sm">
+          <thead class="bg-gray-50 dark:bg-custom-dark text-xs text-gray-500 dark:text-custom-muted uppercase sticky top-0 transition-colors">
             <tr>
               <th class="px-6 py-2 text-left">Data</th>
               <th class="px-6 py-2 text-left">Akcja</th>
@@ -66,7 +66,7 @@
               <th class="px-6 py-2 text-left">ID Encji</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-200">
+          <tbody class="divide-y divide-gray-200 dark:divide-custom-border text-gray-800 dark:text-custom-light transition-colors">
             <tr v-for="log in logs" :key="log.created_at">
               <td class="px-6 py-2">{{ new Date(log.created_at).toLocaleString() }}</td>
               <td class="px-6 py-2 font-bold">{{ log.action }}</td>

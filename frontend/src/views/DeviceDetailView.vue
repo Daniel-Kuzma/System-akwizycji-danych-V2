@@ -1,23 +1,23 @@
 <template>
   <div class="p-6 max-w-7xl mx-auto">
-    <button @click="router.push('/urzadzenia')" class="text-blue-600 hover:underline mb-6 flex items-center gap-2">
+    <button @click="router.push('/urzadzenia')" class="text-blue-600 dark:text-blue-400 hover:underline mb-6 flex items-center gap-2 transition-colors">
       &larr; Wróć do listy urządzeń
     </button>
 
-    <div v-if="isLoadingData" class="py-10 text-gray-500 font-medium">Ładowanie interfejsu urządzenia...</div>
-    <div v-else-if="errorMessage" class="py-10 text-red-500 font-medium">{{ errorMessage }}</div>
+    <div v-if="isLoadingData" class="py-10 text-gray-500 dark:text-custom-muted font-medium text-center">Ładowanie interfejsu urządzenia...</div>
+    <div v-else-if="errorMessage" class="py-10 text-red-500 font-medium text-center">{{ errorMessage }}</div>
     
     <div v-else>
       <!-- Nagłówek -->
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-gray-200 pb-4 gap-4">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-gray-200 dark:border-custom-border pb-4 gap-4 transition-colors">
         <div>
-          <h1 class="text-3xl font-bold text-gray-800">{{ device.device_name }}</h1>
-          <p class="text-gray-600 mt-1">Lokalizacja: {{ device.device_location }} | Uprawa: {{ device.name_of_cultivation }}</p>
+          <h1 class="text-3xl font-bold text-gray-800 dark:text-custom-light">{{ device.device_name }}</h1>
+          <p class="text-gray-600 dark:text-custom-muted mt-1">Lokalizacja: {{ device.device_location }} | Uprawa: {{ device.name_of_cultivation }}</p>
         </div>
         
         <button 
           @click="router.push(`/urzadzenia/${deviceId}/ustawienia`)"
-          class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded transition-colors"
+          class="bg-gray-100 dark:bg-custom-dark hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-800 dark:text-custom-light border border-transparent dark:border-custom-border font-semibold py-2 px-4 rounded transition-colors"
         >
           ⚙️ Ustawienia urządzenia
         </button>
@@ -25,16 +25,16 @@
 
       <!-- Karty analityczne (Procent optymalnych warunków) -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between">
+        <div class="bg-white dark:bg-custom-card p-6 rounded-lg shadow-sm border border-gray-200 dark:border-custom-border flex items-center justify-between transition-colors">
           <div>
-            <p class="text-sm text-gray-500 font-medium mb-1">Optymalna temperatura</p>
+            <p class="text-sm text-gray-500 dark:text-custom-muted font-medium mb-1">Optymalna temperatura</p>
             <p class="text-3xl font-bold text-red-500">{{ tempAnalysisPercentage }}%</p>
           </div>
           <div class="text-4xl">🌡️</div>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex items-center justify-between">
+        <div class="bg-white dark:bg-custom-card p-6 rounded-lg shadow-sm border border-gray-200 dark:border-custom-border flex items-center justify-between transition-colors">
           <div>
-            <p class="text-sm text-gray-500 font-medium mb-1">Optymalna wilgotność</p>
+            <p class="text-sm text-gray-500 dark:text-custom-muted font-medium mb-1">Optymalna wilgotność</p>
             <p class="text-3xl font-bold text-blue-500">{{ humAnalysisPercentage }}%</p>
           </div>
           <div class="text-4xl">💧</div>
@@ -42,14 +42,14 @@
       </div>
 
       <!-- Panel Telemetrii -->
-      <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-8">
+      <div class="bg-white dark:bg-custom-card p-6 rounded-lg shadow-sm border border-gray-200 dark:border-custom-border mb-8 transition-colors">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-xl font-bold text-gray-800">Historia pomiarów</h2>
+          <h2 class="text-xl font-bold text-gray-800 dark:text-custom-light">Historia pomiarów</h2>
           
           <select 
             v-model="selectedTimeRange" 
             @change="fetchTelemetry"
-            class="border border-gray-300 rounded-md p-2 text-sm focus:ring-blue-500 focus:border-blue-500"
+            class="border border-gray-300 dark:border-custom-border bg-white dark:bg-custom-dark text-gray-900 dark:text-custom-light rounded-md p-2 text-sm focus:ring-blue-500 focus:border-blue-500 transition-colors"
           >
             <option value="LAST_HOUR">Ostatnia godzina</option>
             <option value="LAST_HALF_DAY">Ostatnie 12 godzin</option>
@@ -59,17 +59,18 @@
           </select>
         </div>
 
-        <div v-if="isFetchingTelemetry" class="flex justify-center items-center h-64 text-gray-400">
+        <div v-if="isFetchingTelemetry" class="flex justify-center items-center h-64 text-gray-400 dark:text-custom-muted">
           Odświeżanie wykresu...
         </div>
-        <div v-else-if="chartSeries[0].data.length === 0" class="flex justify-center items-center h-64 text-gray-400">
+        <div v-else-if="chartSeries[0].data.length === 0" class="flex justify-center items-center h-64 text-gray-400 dark:text-custom-muted">
           Brak danych telemetrycznych w wybranym okresie.
         </div>
         <div v-else class="w-full">
+          <!-- Wykres podpięty pod dynamiczne computedChartOptions -->
           <VueApexCharts 
             type="area" 
             height="400" 
-            :options="chartOptions" 
+            :options="computedChartOptions" 
             :series="chartSeries" 
           />
         </div>
@@ -80,14 +81,14 @@
         <button 
           @click="startNewAnalysis"
           :disabled="isTogglingAnalysis"
-          class="bg-green-600 text-white px-4 py-2 rounded font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
+          class="bg-green-600 dark:bg-green-700 text-white px-4 py-2 rounded font-semibold hover:bg-green-700 dark:hover:bg-green-600 transition-colors disabled:opacity-50"
         >
           Rozpocznij nową analizę
         </button>
         <button 
           @click="endCurrentAnalysis"
           :disabled="isTogglingAnalysis"
-          class="bg-red-600 text-white px-4 py-2 rounded font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
+          class="bg-red-600 dark:bg-red-700 text-white px-4 py-2 rounded font-semibold hover:bg-red-700 dark:hover:bg-red-600 transition-colors disabled:opacity-50"
         >
           Zakończ obecną analizę
         </button>
@@ -97,7 +98,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { apiFetch } from '../services/api'
 import VueApexCharts from 'vue3-apexcharts'
@@ -124,37 +125,51 @@ const chartSeries = ref([
   { name: 'Wilgotność (%)', data: [] }
 ])
 
-const chartOptions = ref({
-  chart: { 
-    type: 'area', 
-    animations: { enabled: false }, // Wyłączone dla wydajności przy dużej liczbie punktów
-    toolbar: { show: true } 
-  },
-  dataLabels: { enabled: false },
-  stroke: { curve: 'smooth', width: 2 },
-  xaxis: { 
-    type: 'datetime',
-    tooltip: { enabled: false }
-  },
-  yaxis: [
-    { 
-      title: { text: 'Temperatura (°C)' }, 
-      labels: { formatter: (val) => val.toFixed(1) },
-      tickAmount: 5
+// Obserwator motywu dla ApexCharts
+const isDarkMode = ref(false)
+let themeObserver = null
+
+// Dynamiczne opcje wykresu (reagujące na isDarkMode)
+const computedChartOptions = computed(() => {
+  return {
+    chart: { 
+      type: 'area', 
+      animations: { enabled: false },
+      toolbar: { show: true },
+      background: 'transparent' // Zapobiega nadpisywaniu tła
     },
-    { 
-      opposite: true, 
-      title: { text: 'Wilgotność (%)' }, 
-      labels: { formatter: (val) => val.toFixed(1) },
-      tickAmount: 5
+    theme: {
+      mode: isDarkMode.value ? 'dark' : 'light' // Wbudowany tryb ciemny ApexCharts
+    },
+    dataLabels: { enabled: false },
+    stroke: { curve: 'smooth', width: 2 },
+    xaxis: { 
+      type: 'datetime',
+      tooltip: { enabled: false }
+    },
+    yaxis: [
+      { 
+        title: { text: 'Temperatura (°C)' }, 
+        labels: { formatter: (val) => val.toFixed(1) },
+        tickAmount: 5
+      },
+      { 
+        opposite: true, 
+        title: { text: 'Wilgotność (%)' }, 
+        labels: { formatter: (val) => val.toFixed(1) },
+        tickAmount: 5
+      }
+    ],
+    colors: ['#EF4444', '#3B82F6'],
+    fill: {
+      type: 'gradient',
+      gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.05, stops: [0, 100] }
+    },
+    tooltip: { 
+      theme: isDarkMode.value ? 'dark' : 'light',
+      x: { format: 'dd MMM yyyy HH:mm:ss' } 
     }
-  ],
-  colors: ['#EF4444', '#3B82F6'], // Czerwony dla temp, Niebieski dla wilgotności
-  fill: {
-    type: 'gradient',
-    gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.05, stops: [0, 100] }
-  },
-  tooltip: { x: { format: 'dd MMM yyyy HH:mm:ss' } }
+  }
 })
 
 const fetchDeviceDetails = async () => {
@@ -197,7 +212,6 @@ const fetchTelemetry = async () => {
     if (response.ok) {
       const data = await response.json()
       
-      // Mapowanie danych z backendu do formatu wymaganego przez ApexCharts [timestamp, value]
       const tempData = data.map(item => [new Date(item.created_at).getTime(), item.temperature_reading])
       const humData = data.map(item => [new Date(item.created_at).getTime(), item.humidity_reading])
       
@@ -245,11 +259,22 @@ const endCurrentAnalysis = async () => {
 }
 
 onMounted(async () => {
+  // Nasłuchiwanie zmian motywu z poziomu paska nawigacji / systemu
+  isDarkMode.value = document.documentElement.classList.contains('dark')
+  themeObserver = new MutationObserver(() => {
+    isDarkMode.value = document.documentElement.classList.contains('dark')
+  })
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+
   await fetchDeviceDetails()
   if (device.value) {
     fetchAnalyses()
     fetchTelemetry()
   }
   isLoadingData.value = false
+})
+
+onUnmounted(() => {
+  if (themeObserver) themeObserver.disconnect()
 })
 </script>

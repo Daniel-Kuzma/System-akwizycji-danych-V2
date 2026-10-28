@@ -1,12 +1,11 @@
 <template>
   <div class="p-6 max-w-7xl mx-auto">
     <div class="flex justify-between items-center mb-8">
-      <h1 class="text-3xl font-bold text-gray-800">Twoje Urządzenia</h1>
+      <h1 class="text-3xl font-bold text-gray-800 dark:text-custom-light transition-colors">Twoje Urządzenia</h1>
       
-      <!-- Przycisk dodawania na górnym pasku widoku -->
       <router-link
         to="/urzadzenia/dodaj"
-        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors"
+        class="bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition-colors"
       >
         + Dodaj urządzenie
       </router-link>
@@ -14,7 +13,7 @@
 
     <!-- Stan ładowania -->
     <div v-if="isLoading" class="flex justify-center items-center py-20">
-      <span class="text-xl text-gray-500">Pobieranie urządzeń...</span>
+      <span class="text-xl text-gray-500 dark:text-custom-muted">Pobieranie urządzeń...</span>
     </div>
 
     <!-- Komunikat o błędzie -->
@@ -25,38 +24,44 @@
     <!-- Główna siatka z urządzeniami -->
     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       
-      <!-- Wspomniany przez Ciebie "kwadrat z plusem" - pojawia się, gdy nie masz jeszcze urządzeń -->
+      <!-- Kwadrat z plusem (Brak urządzeń) -->
       <router-link
         v-if="devices.length === 0"
         to="/urzadzenia/dodaj"
-        class="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-10 hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer min-h-[200px]"
+        class="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-custom-border rounded-lg p-10 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-custom-card transition-colors cursor-pointer min-h-[200px]"
       >
-        <span class="text-5xl text-gray-400 mb-4">+</span>
-        <span class="text-gray-600 font-medium text-lg">Dodaj pierwsze urządzenie</span>
+        <span class="text-5xl text-gray-400 dark:text-custom-muted mb-4">+</span>
+        <span class="text-gray-600 dark:text-custom-light font-medium text-lg">Dodaj pierwsze urządzenie</span>
       </router-link>
 
       <!-- Renderowanie właściwych kart urządzeń z API -->
       <div 
         v-for="device in devices" 
         :key="device.public_id"
-        class="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col"
+        class="bg-white dark:bg-custom-card border border-gray-200 dark:border-custom-border rounded-lg shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col"
       >
         <div class="flex justify-between items-start mb-4">
-          <h2 class="text-xl font-bold text-gray-800">{{ device.device_name }}</h2>
-          <!-- Kolor można potem uzależnić od statusu (np. czerwony dla awarii) -->
-          <span class="text-xs font-semibold px-2 py-1 rounded-full bg-green-100 text-green-800">
-            {{ device.device_status }}
+          <h2 class="text-xl font-bold text-gray-800 dark:text-custom-light">{{ device.device_name }}</h2>
+          
+          <!-- Dynamiczna odznaka (badge) zmieniająca kolor w zależności od statusu -->
+          <span 
+            class="text-xs font-semibold px-2 py-1 rounded-full transition-colors"
+            :class="device.device_status && device.device_status.toUpperCase() === 'OFFLINE' 
+              ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400' 
+              : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400'"
+          >
+            {{ device.device_status ? device.device_status.toUpperCase() : 'BRAK DANYCH' }}
           </span>
         </div>
         
-        <div class="text-sm text-gray-600 space-y-2 mb-6 flex-grow">
-          <p><strong>Lokalizacja:</strong> {{ device.device_location }}</p>
-          <p><strong>Typ uprawy:</strong> {{ device.name_of_cultivation }}</p>
+        <div class="text-sm text-gray-600 dark:text-custom-muted space-y-2 mb-6 flex-grow transition-colors">
+          <p><strong class="dark:text-custom-light">Lokalizacja:</strong> {{ device.device_location }}</p>
+          <p><strong class="dark:text-custom-light">Typ uprawy:</strong> {{ device.name_of_cultivation }}</p>
         </div>
 
         <button 
           @click="goToDevice(device.public_id)"
-          class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded transition-colors"
+          class="w-full bg-gray-100 dark:bg-custom-dark hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-800 dark:text-custom-light font-semibold py-2 px-4 rounded border border-transparent dark:border-custom-border transition-colors"
         >
           Przejdź do analizy
         </button>
@@ -75,7 +80,6 @@ const devices = ref([])
 const isLoading = ref(true)
 const errorMessage = ref('')
 
-// Pobieranie danych po załadowaniu komponentu
 const fetchDevices = async () => {
   isLoading.value = true
   errorMessage.value = ''
@@ -96,12 +100,10 @@ const fetchDevices = async () => {
   }
 }
 
-// Nawigacja do konkretnego urządzenia z użyciem jego public_id
 const goToDevice = (publicId) => {
   router.push(`/urzadzenia/${publicId}`)
 }
 
-// Uruchomienie funkcji natychmiast po wejściu na stronę
 onMounted(() => {
   fetchDevices()
 })

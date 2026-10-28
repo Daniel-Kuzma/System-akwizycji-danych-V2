@@ -1,7 +1,9 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-100 py-10">
-    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-      <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">Utwórz konto</h1>
+  <!-- Zmiana tła strony na adaptujące się do motywu -->
+  <div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-custom-dark py-10 transition-colors">
+    <!-- Panel dopasowany do trybu ciemnego -->
+    <div class="bg-white dark:bg-custom-card p-8 rounded-lg shadow-md w-full max-w-md border border-transparent dark:border-custom-border transition-colors">
+      <h1 class="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-custom-light">Utwórz konto</h1>
 
       <form @submit.prevent="handleRegister">
         <BaseInput label="Imię" v-model="name" required />
@@ -18,10 +20,10 @@
           @input="validatePassword"
         />
 
-        <div v-if="errorMessage" class="text-red-500 text-sm text-center mb-4">
+        <div v-if="errorMessage" class="text-red-500 dark:text-red-400 text-sm text-center mb-4">
           {{ errorMessage }}
         </div>
-        <div v-if="successMessage" class="text-green-500 text-sm text-center mb-4">
+        <div v-if="successMessage" class="text-green-500 dark:text-green-400 text-sm text-center mb-4">
           {{ successMessage }}
         </div>
 
@@ -30,16 +32,16 @@
         </BaseButton>
       </form>
 
-      <div class="mt-6 text-center text-sm text-gray-600">
+      <div class="mt-6 text-center text-sm text-gray-600 dark:text-custom-muted">
         Masz już konto? 
-        <router-link to="/login" class="text-blue-600 hover:underline">Zaloguj się</router-link>
+        <router-link to="/login" class="text-blue-600 dark:text-blue-400 hover:underline">Zaloguj się</router-link>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { BASE_URL } from '../services/api'
 import BaseInput from '../components/BaseInput.vue'
@@ -112,4 +114,13 @@ const handleRegister = async () => {
     isLoading.value = false
   }
 }
+
+// Upewniamy się, że strona rejestracji wczytuje preferencję motywu z localStorage
+onMounted(() => {
+  if (localStorage.getItem('theme') === 'dark') {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
+})
 </script>

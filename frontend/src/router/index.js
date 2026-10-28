@@ -34,6 +34,12 @@ const routes = [
     meta: { requiresAuth: true, requiresUser: true } 
   },
   { 
+    // Nowa ścieżka do ustawień konta
+    path: '/ustawienia-konta', 
+    component: () => import('../views/AccountSettingsView.vue'),
+    meta: { requiresAuth: true } 
+  },
+  { 
     path: '/admin', 
     component: () => import('../views/AdminView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true } 
