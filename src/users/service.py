@@ -73,13 +73,17 @@ async def update_user_password(user_request : ChangePasswordRequest, db : AsyncS
         logger.exception("Critical problem with server")
         raise HTTPException(status_code = status.HTTP_500_INTERNAL_SERVER_ERROR, detail = "Critical problem with server:")
 
-async def reset_password(user_request : EmailRequest, db : AsyncSession, user):
+async def reset_password(user_request : EmailRequest, db : AsyncSession):
     password_generator = PasswordGenerator()
     random_password = password_generator.generate()
     user_email = user_request.email
+    user_stmt = await db.execute(select(User).where(User.email == user_email).limit(1))
+    user_result = user_stmt.scalar()
+    if user_result is None:
+        raise HTTPException(status_code = status.HTTP_400_BAD_REQUEST, detail = "User with this email is not exist")
     try:
-        await db.execute(update(User).where(User.id == user.get("private_id")).values(password = crypt_context.hash(random_password)))
-        await create_audit_log(db, user_id = user.get("private_id"), action = "RESET USER PASSWORD", entity_type = "user", entity_id = user.get("public_id"))
+        await db.execute(update(User).where(User.id == user_result.id).values(password = crypt_context.hash(random_password)))
+        await create_audit_log(db, user_id = user_result.id, action = "RESET USER PASSWORD", entity_type = "user", entity_id = str(user_result.public_id))
         await db.commit()
         await send_email(user_email, "New user password", f"This your new password: {random_password}, after login change this password")
     except Exception as e:
