@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-
+import InstructionView from '../views/InstructionView.vue'
 const routes = [
   { 
     path: '/', 
@@ -43,6 +43,11 @@ const routes = [
     path: '/admin', 
     component: () => import('../views/AdminView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true } 
+  },
+  {
+    path: '/instrukcja',
+    name: 'Instruction',
+    component: InstructionView
   }
 ]
 
