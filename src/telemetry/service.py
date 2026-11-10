@@ -63,13 +63,15 @@ async def send_email_if_conditions_are_critical(device_id, temperature : float, 
 async def save_telemeter_in_database(token : str, temperature : float, humidity : float, db : AsyncSession):
     verification_token = token.split(".")
     device_result = await device_check(verification_token[0], db)
-    device_id = device_result.id
-    if not device_id:
+    if not device_result:
         return False
+    device_id = device_result.id
     if await token_verification(token, device_id, db):
-        send_email_if_conditions_are_critical(device_id, temperature, humidity, db)
+        await send_email_if_conditions_are_critical(device_id, temperature, humidity, db)
         try: 
-            new_telemetry = TelemetryData(device_id = device_id, temperature_reading = temperature, humidity_reading = humidity)
+            temperature_to_save = round(temperature,2)
+            humidity_to_save = round(humidity,2)
+            new_telemetry = TelemetryData(device_id = device_id, temperature_reading = temperature_to_save, humidity_reading = humidity_to_save)
             db.add(new_telemetry)
             await db.commit()
             return f"Added data for device: {verification_token[0]}, "
